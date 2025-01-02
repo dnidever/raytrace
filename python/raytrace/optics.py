@@ -2,7 +2,7 @@
 
 import os
 import numpy as np
-
+from .surface import Point,NormalVector,Plane
 
 class Optics(object):
     """ Main class for optical elements """
@@ -38,21 +38,21 @@ class Plane(Optics):
 
     def __init__(self,normal):
         super().__init__(**kw)
-        self.normal = normal
+        self.normal = NormalVecetor(normal)
 
 
 class Grating(Optics):
 
     def __init__(self,normal):
         super().__init__(**kw)
-        self.normal = normal
+        self.normal = NormalVector(normal)
 
 
 class Detector(Optics):
 
     def __init__(self,normal):
         super().__init__(**kw)
-        self.normal = normal
+        self.normal = NormalVector(normal)
 
 
         

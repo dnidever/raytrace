@@ -18,22 +18,25 @@ class Point(object):
         return np.array([self.__x,self.__y,self.__z])
 
     
-class Normal(object):
+class NormalVector(object):
     """ Normal vector."""
 
     def __init__(self,normal):
         if len(position)!=3:
             raise ValueError('Normal needs three elements')
         self.__normal = np.array(normal).astype(float)
-
+        self.__normal /= np.linalg.norm(self.__normal)   # normalize
+        
     @property
     def data(self):
         return self.__normal
+
+
     
 class Plane(object):
 
     def __init__(self,normal):
-        self.normal = Normal(normal)
+        self.normal = NormalVector(normal)
 
 
 class Sphere(object):
