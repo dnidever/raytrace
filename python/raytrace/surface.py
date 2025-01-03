@@ -31,16 +31,83 @@ class NormalVector(object):
     def data(self):
         return self.__normal
 
+class Surface(object):
+    """ Main surface class. """
 
-    
-class Plane(object):
-
-    def __init__(self,normal):
+    def __init__(self,position=None,normal=None):
+        if position is None:
+            position = [0.0,0.0,0.0]
+        self.position = Point(position)
+        if normal is None:
+            normal = [0.0,0.0,1.0]
         self.normal = NormalVector(normal)
 
+    def centerdistance(self,point):
+        """ Return distance of point to the center of the surface."""
+        pass
 
-class Sphere(object):
+    def dointersect(self,ray):
+        """ Does the ray intersect the the surface """
+        pass
 
-    def __init__(self,position,radius):
-        self.position = Point(position)
+    def intersection(self,ray):
+        """ Return the first intersection point """
+        pass
+    
+class Plane(Surface):
+
+    def __init__(self,**kw):
+        super().__init(**kw)
+        self.position = None
+
+    def centerdistance(self,point):
+        pass
+
+    def dointersect(self,ray):
+        """ Does the ray intersect the the surface """
+        pass
+
+    def intersection(self,ray):
+        """ Return the first intersection point """
+        pass
+
+    
+class Sphere(Surface):
+
+    def __init__(self,radius,convex=True,**kw):
+        super().__init(**kw)
         self.radius = radius
+        self.convex = convex
+
+    def centerdistance(self,point):
+        pass
+
+    def dointersect(self,ray):
+        """ Does the ray intersect the the surface """
+        pass
+
+    def intersection(self,ray):
+        """ Return the first intersection point """
+        pass
+
+    
+class Parabola(Surface):
+
+    def __init__(self,a,convex=True,**kw):
+        super().__init(**kw)
+        # a is the leading coefficient of the parabola and determines the shape
+        self.__a = float(a)
+        self.position = Point(position)
+        self.normal = NormalVector(normal)
+        self.convex = convex
+
+    def centerdistance(self,point):
+        pass
+
+    def dointersect(self,ray):
+        """ Does the ray intersect the the surface """
+        pass
+
+    def intersection(self,ray):
+        """ Return the first intersection point """
+        pass
