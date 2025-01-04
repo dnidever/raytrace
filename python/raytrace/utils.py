@@ -3,7 +3,48 @@
 import os
 import numpy as np
 
+def rotation_matrix(axis,angle,degrees=False):
+    """ 3x3 rotation matrix around a single axis """
+    anglerad = angle
+    if degrees:
+        anglerad = np.deg2rad(angle)
+    c = np.cos(anglerad)
+    s = np.sin(anglerad)
+    rot = np.zeros((3,3),float)
+    if axis==0:   # x-axis
+        rot[0,:] = [ 1, 0, 0]
+        rot[1,:] = [ 0, c,-s]
+        rot[2,:] = [ 0, s, c]
+    elif axis==1: # y-axis
+        rot[0,:] = [ c, 0, s]
+        rot[1,:] = [ 0, 1, 0]
+        rot[2,:] = [-s, 0, c]
+    elif axis==2: # z-axis
+        rot[0,:] = [ c,-s, 0]
+        rot[1,:] = [ s, c, 0]
+        rot[2,:] = [ 0, 0, 1]
+    else:
+        raise ValueError('Only axis=0,1,2 supported')
+    return rot
 
+def rotation(values,degrees=False):
+    """ Create rotation matrix from multiple rotations."""
+    # input is a list/tuple of rotations
+    # each rotation is a 2-element list/tuple of (axis,angle)
+
+    # Single rotation
+    if isinstance(values[0],list)==False and isinstance(values[0],tuple)==False:
+        values = [values]
+
+    # Rotation loop
+    rot = np.identity(3)
+    for i in range(len(values)):
+        axis,angle = values[i]
+        rr = rotation_matrix(axis,angle,degrees=degrees)
+        rot = np.matmul(rot,rr)
+    return rot
+
+    
 # intersection function
 def intersect_line_plane(p0, p1, p_co, p_no, epsilon=1e-6):
     """
