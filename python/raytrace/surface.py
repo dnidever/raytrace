@@ -8,6 +8,25 @@ from . import utils,ray
 
 EPSILON = 1e-10
 
+def islinelike(obj):
+    """ Check if an object is line-like """
+    if isinstance(b,Line) or isinstance(b,ray.Ray) or issubclass(b.__class__,Vector):
+        return True
+    else:
+        return False
+
+def linelikenormal(obj):
+    """ Return normal vector data of line-like object """
+    if isinstance(b,Line):
+        data = b.slopes.copy()
+    elif isinstance(b,ray.Ray):
+        data = ray.normal.data.copy()
+    elif issubclass(b.__class__,Vector):
+        data = b.data.copy()
+    else:
+        raise ValueError('Object is not line-like')
+    return data
+
 class Point(object):
     """ Class for a point."""
 
@@ -291,6 +310,24 @@ class Vector(object):
                 raise ValueError('must have three values')
         cp = np.cross(self.data,data)
         return self.__class__(cp)
+
+    def anglebetween(self,value,degrees=False):
+        """ Return the angle between two vectors """
+        if issubclass(value.__class__,self.__class__):
+            data = value.data
+        else:
+            data = np.atleast_1d(value).astype(float)
+            if data.size != 3:
+                raise ValueError('must have three values')
+        dp = np.dot(self.data,data)
+        r1 = np.linalg.norm(self.data)
+        r2 = np.linalg.norm(data)
+        if r1 < EPSILON or r2 < EPSILON:
+            return 0.0
+        angle = np.arccos(dp/(r1*r2))
+        if degrees:
+            angle = np.rad2deg(angle)
+        return angle
     
     def isparallel(self,value):
         """ Check if a vector is parallel """
@@ -632,20 +669,28 @@ class Line(object):
 
     def isparallel(self,b):
         """ Figure out if a line is parallel """
-        if isinstance(b,Line)==False:
-            raise ValueError('b must be a Line object')
-        # direction vectors must be parallal
-        normal1 = self.slopes.copy()
-        r1 = np.linalg.norm(normal1)
-        if r1 > 0: normal1 /= r1
-        normal2 = b.slopes.copy()
-        r2 = np.linalg.norm(normal2)
-        if r2 > 0: normal2 /= r2
-        if np.sum(np.abs(normal1-normal2)) < EPSILON:
+        if islinelike(b)==False:
+            raise ValueError('b must be a Line-line object')
+        data = linelikenormal(b)
+        # if cross-product of the two vectors is zero, then they are parallel
+        cp = np.cross(self.slopes,data)
+        if np.linalg.norm(cp) < EPSILON:
             return True
         else:
             return False
 
+    def isperpendicular(self,b):
+        """ Figure out if a line is perpendicular """
+        if islinelike(b)==False:
+            raise ValueError('b must be a Line-line object')
+        data = linelikenormal(b)
+        # calculate dot product, zero if they orthogonal
+        dotproduct = np.dot(self.slopes,data)
+        if np.abs(dotproduct) < EPSILON:
+            return True
+        else:
+            return False
+        
     def isonline(self,point):
         """ Check if a point is on the line """
         if isinstance(point,Point):
@@ -850,18 +895,25 @@ class Plane(Surface):
         return dist
 
     def isparallel(self,line):
-        """ Check if a line of ray is parallel to the plane """
+        """ Check if a line or ray is parallel to the plane """
+        # check if the line direction is orthogonal to the plane's normal vector
+        # calculate dot product, zero if they orthogonal
+        if islinelike(line)==False:
+            raise ValueError('b must be a Line-line object')
+        data = linelikenormal(line)
+        # check if line is perpendicular to plane normal vector
+        return self.normal.isperpendicular(data)
+
+    def isperpendicular(self,line):
+        """ Check if a line of ray is perpendicular to the plane """
         # check if the line normal is orthogonal to the plane's normal vector
         # calculate dot product, zero if they orthogonal
-        if isinstance(line,Line):
-            norm = NormalVector(line.slopes)
-            pass
-        elif isinstance(line,ray.Ray):
-            pass
-        else:
-            raise ValueError('Can only check Line or Ray')
+        if islinelike(line)==False:
+            raise ValueError('b must be a Line-line object')
+        data = linelikenormal(line)
+        # check if line is parallel to plane normal vector
+        return self.normal.isparallel(data)
         
-
     def isonplane(self,point):
         """ Check if a point lies on the plane """
         pass
