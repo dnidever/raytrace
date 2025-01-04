@@ -567,7 +567,26 @@ class Plane(Surface):
     #     if nt==1:
     #         pos = pos.squeeze()
     #     return pos
-    
+
+    @classmethod
+    def fromnormalcenter(cls,normal,position):
+        """ Class method to construct a Plen from a normal and center """
+        if isinstance(normal,Normal):
+            norm = normal.data.copy()
+        else:
+            norm = normal
+        if isinstance(position,Point):
+            cen = position.data.copy()
+        else:
+            cen = np.array(position).astype(float)
+        # Equation of a plane in 3D
+        # a*x + b*y + c*z + d = 0
+        # the normal vector is (a,b,c)
+        # to solve for d, put the x/y/z center values in the equation and solve for d
+        # d = -(a*x0+b*y0+c*z0)
+        d = -np.sum(norm[0]*cen[0]*norm[1]*cen[1]+norm[2]*cen[2])
+        return Plane(normal,d)
+        
     @property
     def equation(self):
         s = '{:.3f}*x + {:.3f}*y + {:.3f}*z + {:.3f} = 0'.format(*self.data)
