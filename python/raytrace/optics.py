@@ -25,7 +25,70 @@ class Optics(object):
         """ Find first point of intersection."""
         pass
 
+class FlatMirror(Optics):
 
+    def __init__(self,index_of_refraction=None,position=None,normal=None):
+        self.index_of_refraction = index_of_refraction
+        self.position = surface.Point(position)
+        self.normal = surface.NormalVector(normal)
+
+        # Need plane and vertices
+        
+    def __call__(self,ray):
+        """ Process the light ray through the optical element."""
+        pass
+        
+    def intersect(self,ray):
+        """ Does a ray intersect with us."""
+        pass
+
+    def intersectpoint(self,ray):
+        """ Find first point of intersection."""
+        pass
+
+class ConcaveMirror(Optics):
+
+    def __init__(self,index_of_refraction=None,position=None,normal=None):
+        self.index_of_refraction = index_of_refraction
+        self.position = surface.Point(position)
+        self.normal = surface.NormalVector(normal)
+
+        # Need sphere or parabola and vertices
+        
+    def __call__(self,ray):
+        """ Process the light ray through the optical element."""
+        pass
+        
+    def intersect(self,ray):
+        """ Does a ray intersect with us."""
+        pass
+
+    def intersectpoint(self,ray):
+        """ Find first point of intersection."""
+        pass
+
+class ConvexMirror(Optics):
+
+    def __init__(self,index_of_refraction=None,position=None,normal=None):
+        self.index_of_refraction = index_of_refraction
+        self.position = surface.Point(position)
+        self.normal = surface.NormalVector(normal)
+
+        # Need sphere or parabola and vertices
+        
+    def __call__(self,ray):
+        """ Process the light ray through the optical element."""
+        pass
+        
+    def intersect(self,ray):
+        """ Does a ray intersect with us."""
+        pass
+
+    def intersectpoint(self,ray):
+        """ Find first point of intersection."""
+        pass
+    
+    
 class Lens(Optics):
 
     def __init__(self,topsurface,bottomsurface,radius,**kw):
@@ -169,3 +232,80 @@ class Source(Optics):
         if len(rr)==1:
             rr = rr[0]
         return rr
+
+class IsotropicSource(Optics):
+
+    # Light source
+    
+    def __init__(self,position=None,kind='isotropic'):
+        if position is None:
+            position = [0.0,0.0,0.0]
+        self.position = surface.Point(position)
+        self.kind = kind
+
+    @property
+    def center(self):
+        return self.position.data
+
+    def __repr__(self):
+        s = 'IsotropicSource({:},o=[{:.3f},{:.3f},{:.3f}])'.format(self.kind,*self.center)
+        return s
+    
+    def rays(self,n=1,wave=5000e-10):
+        """ Make a number of random rays with input wavelengths """
+        nwave = np.atleast_1d(wave).size
+        if nwave==1:
+            wave = np.zeros(n,float)+np.atleast_1d(wave)[0]
+        rr = []
+        if self.kind=='isotropic':
+            u = np.random.rand(n)
+            v = np.random.rand(n)
+            theta = 2*np.pi*u
+            phi = np.arccos(2*v-1)
+            for i in range(n):
+                normal = surface.NormalVector.fromangles(phi[i],theta[i])
+                r = ray.Ray(wave[i],self.center,normal.data)
+                rr.append(r)
+        if len(rr)==1:
+            rr = rr[0]
+        return rr
+    
+class FiberSource(object):
+
+    # fiber light source
+    
+    def __init__(self,position=None,kind='isotropic'):
+        if position is None:
+            position = [0.0,0.0,0.0]
+        self.position = surface.Point(position)
+        self.kind = kind
+
+    @property
+    def center(self):
+        return self.position.data
+
+    def __repr__(self):
+        s = 'FiberSource({:},o=[{:.3f},{:.3f},{:.3f}])'.format(self.kind,*self.center)
+        return s
+    
+    def rays(self,n=1,wave=5000e-10):
+
+class LaserSource(object):
+
+    # fiber light source
+    
+    def __init__(self,position=None,kind='isotropic'):
+        if position is None:
+            position = [0.0,0.0,0.0]
+        self.position = surface.Point(position)
+        self.kind = kind
+
+    @property
+    def center(self):
+        return self.position.data
+
+    def __repr__(self):
+        s = 'FiberSource({:},o=[{:.3f},{:.3f},{:.3f}])'.format(self.kind,*self.center)
+        return s
+    
+    def rays(self,n=1,wave=5000e-10):
