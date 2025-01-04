@@ -137,16 +137,56 @@ class Grating(Optics):
         super().__init__(**kw)
         self.normal = surface.NormalVector(normal)
 
+    def plot(self,ax=None,color=None,alpha=0.6):
+        """ Make a 3-D plot of grating """
+        import matplotlib.pyplot as plt
+        if ax is None:
+            ax = plt.figure().add_subplot(projection='3d')
+        # Create a grid of points
+        x = np.linspace(-5, 5, 10)
+        y = np.linspace(-5, 5, 10)
+        X, Y = np.meshgrid(x, y)
+        a,b,c,d = self.data
+        # Calculate the corresponding Z values for the plane
+        Z = (-d - a * X - b * Y) / c
+        # Plot the plane
+        ax.plot_surface(X, Y, Z, alpha=alpha)
+        #ax.plot(pos[:,0],pos[:,1],pos[:,2],color=color)
+        # Include the lines that show the grating lines
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        return ax
+        
 
 class Detector(Optics):
 
-    def __init__(self,normal,vertices):
-        super().__init__(**kw)
+    # This is a nondescript detector that records where each ray hits
+    # and the energy (and normal?)
+    
+    def __init__(self,position,normal,vertices):
+        self.position = surface.Point(position)
         self.normal = surface.NormalVector(normal)
+        # construct plane object
+        self.plane = surface.Plane(normal,d)
         self.vertices = vertices
+        self.data = []
 
+    def __call__(self,ray):
+        """ Process a ray """
+        pass
+
+    def intersections(self,ray):
+        """ Get the intersections of a ray with the detector """
+        tpnt = self.plane.intersections(ray)
+        # now make sure it's within the vertices
+    
+    def display(self,bins=1000):
+        """ Display an image of the recorded rays """
+        pass
+        
     def plot(self,ax=None,color=None,alpha=0.6):
-        """ Make a 3-D plot at input points t."""
+        """ Make a 3-D plot """
         import matplotlib.pyplot as plt
         if ax is None:
             ax = plt.figure().add_subplot(projection='3d')
@@ -177,7 +217,7 @@ class CCD(Optics):
         self.pixsize = pixsize
 
     def plot(self,ax=None,color=None,alpha=0.6):
-        """ Make a 3-D plot at input points t."""
+        """ Make a 3-D plot """
         import matplotlib.pyplot as plt
         if ax is None:
             ax = plt.figure().add_subplot(projection='3d')
@@ -195,117 +235,3 @@ class CCD(Optics):
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         return ax
-    
-class Source(Optics):
-
-    # Light source
-    
-    def __init__(self,position=None,kind='isotropic'):
-        if position is None:
-            position = [0.0,0.0,0.0]
-        self.position = surface.Point(position)
-        self.kind = kind
-
-    @property
-    def center(self):
-        return self.position.data
-
-    def __repr__(self):
-        s = 'Source({:},o=[{:.3f},{:.3f},{:.3f}])'.format(self.kind,*self.center)
-        return s
-    
-    def rays(self,n=1,wave=5000e-10):
-        """ Make a number of random rays with input wavelengths """
-        nwave = np.atleast_1d(wave).size
-        if nwave==1:
-            wave = np.zeros(n,float)+np.atleast_1d(wave)[0]
-        rr = []
-        if self.kind=='isotropic':
-            u = np.random.rand(n)
-            v = np.random.rand(n)
-            theta = 2*np.pi*u
-            phi = np.arccos(2*v-1)
-            for i in range(n):
-                normal = surface.NormalVector.fromangles(phi[i],theta[i])
-                r = ray.Ray(wave[i],self.center,normal.data)
-                rr.append(r)
-        if len(rr)==1:
-            rr = rr[0]
-        return rr
-
-class IsotropicSource(Optics):
-
-    # Light source
-    
-    def __init__(self,position=None,kind='isotropic'):
-        if position is None:
-            position = [0.0,0.0,0.0]
-        self.position = surface.Point(position)
-        self.kind = kind
-
-    @property
-    def center(self):
-        return self.position.data
-
-    def __repr__(self):
-        s = 'IsotropicSource({:},o=[{:.3f},{:.3f},{:.3f}])'.format(self.kind,*self.center)
-        return s
-    
-    def rays(self,n=1,wave=5000e-10):
-        """ Make a number of random rays with input wavelengths """
-        nwave = np.atleast_1d(wave).size
-        if nwave==1:
-            wave = np.zeros(n,float)+np.atleast_1d(wave)[0]
-        rr = []
-        if self.kind=='isotropic':
-            u = np.random.rand(n)
-            v = np.random.rand(n)
-            theta = 2*np.pi*u
-            phi = np.arccos(2*v-1)
-            for i in range(n):
-                normal = surface.NormalVector.fromangles(phi[i],theta[i])
-                r = ray.Ray(wave[i],self.center,normal.data)
-                rr.append(r)
-        if len(rr)==1:
-            rr = rr[0]
-        return rr
-    
-class FiberSource(object):
-
-    # fiber light source
-    
-    def __init__(self,position=None,kind='isotropic'):
-        if position is None:
-            position = [0.0,0.0,0.0]
-        self.position = surface.Point(position)
-        self.kind = kind
-
-    @property
-    def center(self):
-        return self.position.data
-
-    def __repr__(self):
-        s = 'FiberSource({:},o=[{:.3f},{:.3f},{:.3f}])'.format(self.kind,*self.center)
-        return s
-    
-    def rays(self,n=1,wave=5000e-10):
-
-class LaserSource(object):
-
-    # fiber light source
-    
-    def __init__(self,position=None,kind='isotropic'):
-        if position is None:
-            position = [0.0,0.0,0.0]
-        self.position = surface.Point(position)
-        self.kind = kind
-
-    @property
-    def center(self):
-        return self.position.data
-
-    def __repr__(self):
-        s = 'FiberSource({:},o=[{:.3f},{:.3f},{:.3f}])'.format(self.kind,*self.center)
-        return s
-    
-    def rays(self,n=1,wave=5000e-10):
