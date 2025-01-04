@@ -156,7 +156,7 @@ def intersect_line_plane(line,plane):
 
     # line
     #  x = x0+sx*t
-    #  y = y0+sb*t
+    #  y = y0+sy*t
     #  z = z0+sz*t
     # plane
     #  a*x + b*y + c*z + d = 0
@@ -169,12 +169,14 @@ def intersect_line_plane(line,plane):
     # 1) one intersection
     # 2) no intersection (parallel and offset)
     # 3) many intersections (contained in the plane)
-
     x0,y0,z0 = line.point
     sx,sy,sz = line.slopes
-    a,b,c,d = plane.data
+    if str(plane.__class__)=="<class 'raytrace.surface.Plane'>":
+        a,b,c,d = plane.data
+    else:
+        a,b,c,d = plane
     numer = -(a*x0 + b*y0 + c*z0 + d)
-    denom = a*sz + b*sy + c*sz
+    denom = a*sx + b*sy + c*sz
 
     # 1 intersection
     if denom != 0.0:
@@ -201,41 +203,48 @@ def intersect_line_plane(line,plane):
 
     return out
 
-
-def intersect_line_parabola(line,parabola):
-    # rotate the line into the Parabola reference frame
+def intersect_line_sphere(line,sphere):
     # line in parametric form
     # substitute x/y/z in parabola equation for the line parametric equations
     # solve quadratic equation in t
 
     # line
     #  x = x0+sx*t
-    #  y = y0+sb*t
+    #  y = y0+sy*t
     #  z = z0+sz*t
-    # parabola
-    #  z = a*(x**2+y**2)
+    # sphere
+    #  (x-a)**2 + (y-b)**2 + (z-c)**2 = r**2
 
-    #  z0+sz*t = d*(x0+sx*t)^2 + a*(y0+sy*t)^2
-    #  z0/a + sz/d*t = x0^2+2*x0*sx*t+sx^2*t^2 + y0^2+2*y0*sy*t+sy^2*t^2
-    #  0 = (sx^2+sy^2)*t^2 + (2*x0*sx+2*y0*sy-sz/a)*t + (x0^2+y0^2-z0/a)
+    #  (x0+sx*t-a)**2 + (y0+sy*t-b)**2 + (z0+sz*t-c)**2 = r**2
+    #
+    #  (x0-a)**2 + 2*(x0-a)*sx*t + sx**2*t**2 +
+    #  (y0-b)**2 + 2*(y0-b)*sy*t + sy**2*t**2 +
+    #  (z0-c)**2 + 2*(z0-c)*sz*t + sz**2*t**2 - r**2 = 0
+    #
+    #  ((x0-a)**2+(y0-b)**2+(z0-c)**2-r**2) +
+    #  2*((x0-a)*sx+(y0-b)*sy+(z0-c)*sz)*t +
+    #  (sx**2+sy**2+sz**2)*t**2 = 0
+
     #  quadratic equation in t
     #  t = -B +/- sqrt(B^2-4AC)
     #      --------------------
     #            2A
 
-    # A = sx^2+sy^2
-    # B = 2*x0*sx+2*y0*sy-sz/a
-    # C = x0^2+y0^2-z0/a
+    # A = sx**2+sy**2+sz**2
+    # B = 2*((x0-a)*sx+(y0-b)*sy+(z0-c)*sz)
+    # C = (x0-a)**2+(y0-b)**2+(z0-c)**2-r**2
     
     # Three options, based on the discriminant
     # 1) B^2-4AC > 0 : 2 solutions
     # 2) B^2-4AC = 0 : 1 solution
     # 3) B^2-4AC < 0 : 0 solutions
 
-    a = parabola.a
-    A = line.slopes[0]**2 + line.slopes[1]**2
-    B = 2*line.point[0]*line.slopes[0] + 2*line.point[1]*line.slopes[1] - line.slopes[2]/a
-    C = line.point[0]**2 + line.point[1]**2 - line.point[2]/a
+    x0,y0,z0 = line.point
+    sx,sy,sz = line.slopes
+    a,b,c,r = sphere.data
+    A = sx**2+sy**2+sz**2
+    B = 2*((x0-a)*sx+(y0-b)*sy+(z0-c)*sz)
+    C = (x0-a)**2+(y0-b)**2+(z0-c)**2-r**2
     discriminant = B**2-4*A*C
 
     # 2 solutions
@@ -259,6 +268,175 @@ def intersect_line_parabola(line,parabola):
         pt = line(t[i])
         out.append(pt)
 
+    return out
+
+
+def intersect_line_halfsphere(line,halfsphere):
+    # line in parametric form
+    # substitute x/y/z in parabola equation for the line parametric equations
+    # solve quadratic equation in t
+
+    # line
+    #  x = x0+sx*t
+    #  y = y0+sy*t
+    #  z = z0+sz*t
+    # sphere
+    #  (x-a)**2 + (y-b)**2 + (z-c)**2 = r**2
+
+    #  (x0+sx*t-a)**2 + (y0+sy*t-b)**2 + (z0+sz*t-c)**2 = r**2
+    #
+    #  (x0-a)**2 + 2*(x0-a)*sx*t + sx**2*t**2 +
+    #  (y0-b)**2 + 2*(y0-b)*sy*t + sy**2*t**2 +
+    #  (z0-c)**2 + 2*(z0-c)*sz*t + sz**2*t**2 - r**2 = 0
+    #
+    #  ((x0-a)**2+(y0-b)**2+(z0-c)**2-r**2) +
+    #  2*((x0-a)*sx+(y0-b)*sy+(z0-c)*sz)*t +
+    #  (sx**2+sy**2+sz**2)*t**2 = 0
+
+    #  quadratic equation in t
+    #  t = -B +/- sqrt(B^2-4AC)
+    #      --------------------
+    #            2A
+
+    # A = sx**2+sy**2+sz**2
+    # B = 2*((x0-a)*sx+(y0-b)*sy+(z0-c)*sz)
+    # C = (x0-a)**2+(y0-b)**2+(z0-c)**2-r**2
+    
+    # Three options, based on the discriminant
+    # 1) B^2-4AC > 0 : 2 solutions
+    # 2) B^2-4AC = 0 : 1 solution
+    # 3) B^2-4AC < 0 : 0 solutions
+
+    x0,y0,z0 = line.point
+    sx,sy,sz = line.slopes
+    a,b,c = halfsphere.center
+    r = halfsphere.radius
+    A = sx**2+sy**2+sz**2
+    B = 2*((x0-a)*sx+(y0-b)*sy+(z0-c)*sz)
+    C = (x0-a)**2+(y0-b)**2+(z0-c)**2-r**2
+    discriminant = B**2-4*A*C
+
+    # 2 solutions
+    if discriminant > 0:
+        t1 = (-B-np.sqrt(discriminant))/(2*A)
+        t2 = (-B+np.sqrt(discriminant))/(2*A)
+        t = [t1,t2]
+        if t2<t1:
+            t = t[t2,t1]
+    # 1 solution
+    elif discriminant == 0:
+        t = [-B/(2*A)]
+    # 0 solutions
+    elif discriminant < 0:
+        t = []
+
+    # Get the points
+    #   just plug t into the line
+    sout = []
+    for i in range(len(t)):
+        pt = line(t[i])
+        sout.append(pt)
+
+    # Make sure to only include intersections above the plane
+    #  rotate the points into the frame of the halfsphere
+    out = []
+    for i in range(len(sout)):
+        pnt = sout[i].copy()
+        pnt -= halfsphere.center
+        rot = halfsphere.normal.rotation_matrix
+        pnt2 = np.matmul(pnt,rot)
+        if pnt2[2] >= 0:
+            out.append(sout[i])
+        
+    # Check if the line passes through the bottom plane
+    bottomplane = halfsphere.bottomplane
+    pout = intersect_line_plane(line,bottomplane)
+    rad = np.linalg.norm(halfsphere.center-pout)
+    if rad < bottomplane.radius:
+        out.append(pout)
+        
+    return out
+
+
+def intersect_line_parabola(line,parabola):
+    # rotate the line into the Parabola reference frame
+    # line in parametric form
+    # substitute x/y/z in parabola equation for the line parametric equations
+    # solve quadratic equation in t
+
+    # line
+    #  x = x0+sx*t
+    #  y = y0+sb*t
+    #  z = z0+sz*t
+    # parabola
+    #  z = d*(x**2+y**2)
+
+    #  z0+sz*t = a*((x0+sx*t)^2 + (y0+sy*t)^2)
+    #  z0/a + sz*t/a = x0^2+2*x0*sx*t+sx^2*t^2 + y0^2+2*y0*sy*t+sy^2*t^2
+    #  (sx^2+sy^2)*t^2 + (2*x0*sx+2*y0*sy-sz/a)*t + (x0^2+y0^2-z0/a) = 0
+    #  quadratic equation in t
+    #  t = -B +/- sqrt(B^2-4AC)
+    #      --------------------
+    #            2A
+
+    # A = sx^2+sy^2
+    # B = 2*x0*sx+2*y0*sy-sz/a
+    # C = x0^2+y0^2-z0/a
+    
+    # Three options, based on the discriminant
+    # 1) B^2-4AC > 0 : 2 solutions
+    # 2) B^2-4AC = 0 : 1 solution
+    # 3) B^2-4AC < 0 : 0 solutions
+
+    # Rotate the line into the reference frame of the parabola
+    rline = line.toframe(parabola)
+    
+    a = parabola.a
+    A = rline.slopes[0]**2 + rline.slopes[1]**2
+    B = 2*rline.point[0]*rline.slopes[0] + 2*rline.point[1]*rline.slopes[1] - rline.slopes[2]/a
+    C = rline.point[0]**2 + rline.point[1]**2 - rline.point[2]/a
+    discriminant = B**2-4*A*C
+
+    # Quadratic term is zero, now just a linear equation
+    if A==0:
+        # B*t + C = 0
+        if B!=0:
+            t = [-C/B]
+    else:
+        # 2 solutions
+        if discriminant > 0:
+            t1 = (-B-np.sqrt(discriminant))/(2*A)
+            t2 = (-B+np.sqrt(discriminant))/(2*A)
+            t = [t1,t2]
+            if t2<t1:
+                t = t[t2,t1]
+        # 1 solution
+        elif discriminant == 0:
+            t = [-B/(2*A)]
+        # 0 solutions
+        elif discriminant < 0:
+            t = []
+
+    # Get the points
+    #   just plug t into the line
+    out1 = []
+    for i in range(len(t)):
+        pt = line(t[i])
+        out1.append(pt)
+
+    # We need to rotate the points back to the original frame
+    out = []
+    rot = parabola.normal.rotation_matrix
+    for i in range(len(sout)):
+        pt = out1[i].copy()
+        pt2 = np.matmul(pt,rot)
+        pt2 += parabola.center
+        out.append(pt2)
+        
+    print(out)
+    
+    #import pdb; pdb.set_trace()
+        
     return out
 
 

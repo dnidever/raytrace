@@ -4,7 +4,7 @@ import os
 import numpy as np
 import copy
 from scipy.spatial.transform import Rotation
-from . import utils
+from . import utils,ray
 
 class Point(object):
     """ Class for a point."""
@@ -50,6 +50,13 @@ class Point(object):
     @property
     def r(self):
         return np.linalg.norm(self.data)
+
+    def distance(self,pnt):
+        """ Return distance between this point and another point """
+        if isinstance(pnt,Point):
+            return np.linalg.norm(self.data-pnt.data)
+        else:
+            return np.linalg.norm(self.data-pnt)
     
     def __repr__(self):
         s = 'Point(x={:.3f},y={:.3f},z={:.3f})'.format(*self.data)
@@ -58,6 +65,25 @@ class Point(object):
     def copy(self):
         return Point(self.data.copy())
 
+    def toframe(self,obj):
+        """ Return the point transformed to the frame of the input object."""
+        if hasattr(obj,'normal')==False:
+            raise ValueError('input object must have a normal')
+        newdata = self.data.copy()
+        if hasattr(obj,'center'):
+            cen = obj.center
+        elif hasattr(obj,'position'):
+            cen = obj.position.data
+        else:
+            cen = np.zeros(3,float)
+        newdata -= cen
+        # the rotation matrix rotates a vector to the normal vector
+        # to rotate the coordinates we need to use the inverse (transpose)
+        rot = obj.normal.rotation_matrix.T
+        newdata = np.matmul(newdata,rot)
+        newpnt = Point(newdata)
+        return newpnt
+    
     def plot(self,ax=None,color=None,size=50):
         """ Plot the point on an a plot. """
         import matplotlib.pyplot as plt
@@ -236,12 +262,12 @@ class Vector(object):
         return np.sqrt(self.data[0]**2+self.data[1]**2)
 
     @property
-    def theta(self):
+    def theta(self,degrees=False):
         """ Return the polar angle (angle from positive z-axis) in degrees. """
         return np.rad2deg(np.arctan2(self.rho,self.data[2]))
 
     @property
-    def phi(self):
+    def phi(self,degrees=False):
         """ Return the azimuthal angle (angle from positive x-axis) in degrees."""
         return np.rad2deg(np.arctan2(self.data[1],self.data[0]))
 
@@ -317,7 +343,20 @@ class NormalVector(Vector):
             raise ValueError('value needs three elements')
         pos = np.array(value).astype(float)
         self.__data = pos
-        
+
+    @classmethod
+    def fromangles(cls,phi,theta,degrees=False):
+        """ Construct NormalVector from phi/theta angles """
+        # phi is measured from positive x-axis
+        # theta is measured from positive z-axis
+        phirad,thetarad = phi,theta
+        if degrees:
+            phirad,thetarad = np.deg2rad(phi),np.deg2rad(theta)
+        data = [np.cos(phirad)*np.sin(thetarad),
+                np.sin(phirad)*np.sin(thetarad),
+                np.cos(thetarad)]
+        return NormalVector(data)
+    
     def __repr__(self):
         s = 'NormalVector([{:.3f},{:.3f},{:.3f})'.format(*self.data)
         return s
@@ -410,7 +449,9 @@ class Line(object):
         if hasattr(obj,'normal')==False:
             raise ValueError('input object must have a normal')
         rot = obj.normal.rotation_matrix
-        newslopes = np.matmul(newline.slopes,rot)
+        newpoint = np.matmul(newline.point,rot.T)
+        newslopes = np.matmul(newline.slopes,rot.T)
+        newline.point = newpoint
         newline.slopes = newslopes
         return newline
         
@@ -439,7 +480,8 @@ class Line(object):
 # circle
 # ellipse
 # cylinder
-    
+# box
+
 class Surface(object):
     """ Main surface base class. """
 
@@ -467,8 +509,7 @@ class Surface(object):
         # rotation
         rot = utils.rotation(([2,self.normal.phi],[1,self.normal.theta]),degrees=True)
         
-        
-    def dointersect(self,ray):
+    def dointersect(self,line):
         """ Does the line intersect the surface """
         intpts = self.intersections(line)
         if len(intpts)==0:
@@ -476,13 +517,12 @@ class Surface(object):
         else:
             return True
 
-    def intersection(self,ray):
-        """ Return the first intersection point """
+    def intersections(self,line):
+        """ Return the intersection points """
         pass
 
     def plot(self):
-        # Axes3D.plot_wireframe(X, Y, Z, *args, **kwargs)
-        # Axes3D.plot_surface(X, Y, Z, *args, **kwargs)
+        """ Make 3D plot of the surface """
         pass
         
     def copy(self):
@@ -496,6 +536,11 @@ class Plane(Surface):
         self.d = d
         self.position = None
 
+        # Equation of a plane in 3D
+        # a*x + b*y + c*z + d = 0
+
+        # the normal vector is (a,b,c)
+
     @property
     def data(self):
         dt = np.zeros(4,float)
@@ -503,18 +548,18 @@ class Plane(Surface):
         dt[3] = self.d
         return dt
 
-    def __call__(self,t):
-        """ Return the position at parametric value t """
-        t = np.atleast_1d(t)
-        nt = len(t)
-        pos = np.zeros((nt,3),float)
-        for i in range(nt):
-            pos[i,0] = self.point[0] + t[i]*self.slopes[0]
-            pos[i,1] = self.point[1] + t[i]*self.slopes[1]
-            pos[i,2] = self.point[2] + t[i]*self.slopes[2]
-        if nt==1:
-            pos = pos.squeeze()
-        return pos
+    # def __call__(self,t):
+    #     """ Return the position at parametric value t """
+    #     t = np.atleast_1d(t)
+    #     nt = len(t)
+    #     pos = np.zeros((nt,3),float)
+    #     for i in range(nt):
+    #         pos[i,0] = self.point[0] + t[i]*self.slopes[0]
+    #         pos[i,1] = self.point[1] + t[i]*self.slopes[1]
+    #         pos[i,2] = self.point[2] + t[i]*self.slopes[2]
+    #     if nt==1:
+    #         pos = pos.squeeze()
+    #     return pos
     
     @property
     def equation(self):
@@ -533,13 +578,29 @@ class Plane(Surface):
             pnt = obj
         else:
             pnt = Point(obj)
-        # 
+        # d = |A*xo + B*yo + C*zo + D |/sqrt(A^2 + B^2 + C^2),
+        # where (xo, yo, zo) is the given point and Ax + By + Cz + D = 0 is the
+        x0,y0,z0 = pnt.data
+        a,b,c,d = self.data
+        numer = np.abs(a*x0+b*y0+c*z0+d)
+        denom = np.sqrt(a**2+b**2+c**2)
+        if denom != 0.0:
+            dist = numer / denom
+        else:
+            dist = np.nan
         return dist
 
-    def intersection(self,ray):
-        """ Return the first intersection point """
-        pass
-
+    def intersections(self,line):
+        """ Return the intersection points """
+        if isinstance(line,ray.Ray):
+            l = Line(ray.position.data,ray.normal.data)
+        elif isinstance(line,Line):
+            l = line
+        else:
+            raise ValueError('input must be Line or Ray')
+        out = utils.intersect_line_plane(l,self)
+        return out
+        
     def plot(self,ax=None,color=None,alpha=0.6):
         """ Make a 3-D plot at input points t."""
         import matplotlib.pyplot as plt
@@ -563,13 +624,19 @@ class Plane(Surface):
 
 class Sphere(Surface):
 
-    def __init__(self,radius,**kw):
-        super().__init__(**kw)
+    def __init__(self,radius,position=None):
         self.radius = radius
+        if position is None:
+            position = [0.0,0.0,0.0]
+        self.position = Point(position)
 
+    @property
+    def data(self):
+        return *self.position.data,self.radius
+        
     def __repr__(self):
-        dd = (*self.position.data,*self.normal.data,self.radius)
-        s = 'Sphere(o=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f}],radius={:.3f})'.format(*dd)
+        dd = (*self.position.data,self.radius)
+        s = 'Sphere(o=[{:.3f},{:.3f},{:.3f}],radius={:.3f})'.format(*dd)
         return s
         
     def distance(self,obj):
@@ -581,9 +648,21 @@ class Sphere(Surface):
             pnt = Point(obj)
         return np.linalg.norm(self.center-pnt)
 
-    def intersection(self,ray):
-        """ Return the first intersection point """
-        pass
+    def intersections(self,line):
+        """ Return the intersection points """
+        if isinstance(line,ray.Ray):
+            l = Line(ray.position.data,ray.normal.data)
+        elif isinstance(line,Line):
+            l = line
+        else:
+            raise ValueError('input must be Line or Ray')
+        out = utils.intersect_line_sphere(l,self)
+        # Sort by distance if ray/line has a position
+        if len(out)>1 and hasattr(l,'position'):
+            dist = [l.position.distance(o) for o in out]
+            if dist[0] > dist[1]:  # flip the order
+                out = [out[1],out[0]]
+        return out
 
     def plot(self,ax=None,color=None,alpha=0.6,cmap='viridis'):
         """ Make a 3-D plot at input points t."""
@@ -593,9 +672,9 @@ class Sphere(Surface):
         # Generate sphere coordinates
         u = np.linspace(0, 2 * np.pi, 100)
         v = np.linspace(0, np.pi, 100)
-        x = np.outer(self.radius*np.cos(u), self.radius*np.sin(v))+self.position.x
-        y = np.outer(self.radius*np.sin(u), self.radius*np.sin(v))+self.position.y
-        z = np.outer(self.radius*np.ones(np.size(u)), self.radius*np.cos(v))+self.position.z
+        x = np.outer(np.cos(u),np.sin(v))*self.radius+self.position.x
+        y = np.outer(np.sin(u),np.sin(v))*self.radius+self.position.y
+        z = np.outer(np.ones(np.size(u)),np.cos(v))*self.radius+self.position.z
         # Plot the sphere
         ax.plot_surface(x, y, z, rstride=4, cstride=4, color=color, alpha=alpha,
                         cmap=cmap, edgecolors='k', lw=0.6)
@@ -609,8 +688,13 @@ class HalfSphere(Surface):
 
     """ Half Sphere, flat on other (bottom) side """
     
-    def __init__(self,radius,**kw):
-        super().__init__(**kw)
+    def __init__(self,radius,position=None,normal=None):
+        if position is None:
+            position = [0.0,0.0,0.0]
+        self.position = Point(position)
+        if normal is None:
+            normal = [0.0,0.0,1.0]
+        self.normal = NormalVector(normal)
         # negative radius is convex
         # positive radius is concave
         self.radius = radius
@@ -619,6 +703,10 @@ class HalfSphere(Surface):
     def convex(self):
         return self.radius
 
+    @property
+    def data(self):
+        return *self.position.data,self.radius
+    
     def __repr__(self):
         dd = (*self.position.data,*self.normal.data,self.radius)
         s = 'HalfSphere(o=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f}],radius={:.3f})'.format(*dd)
@@ -633,9 +721,35 @@ class HalfSphere(Surface):
             pnt = Point(obj)
         return np.linalg.norm(self.center-pnt)
 
-    def intersection(self,ray):
-        """ Return the first intersection point """
-        pass
+    @property
+    def bottomplane(self):
+        """ Return the plane of the bottom of the half sphere """
+        # equation of plane is
+        # a*x + b*y + c*z + d = 0
+        # where the normal vector is (a,b,c)
+        # so we just need to find d
+        # put our center point into the equation and solve for d
+        # d = -(a*x0+b*y0+c*z0)
+        d = -np.sum(self.normal.data*self.center)
+        p = Plane(self.normal.data,d)
+        p.radius = self.radius
+        return p
+        
+    def intersections(self,line):
+        """ Return the intersection points """
+        if isinstance(line,ray.Ray):
+            l = Line(ray.position.data,ray.normal.data)
+        elif isinstance(line,Line):
+            l = line
+        else:
+            raise ValueError('input must be Line or Ray')
+        out = utils.intersect_line_halfsphere(l,self)
+        # Sort by distance if ray/line has a position
+        if len(out)>1 and hasattr(l,'position'):
+            dist = [l.position.distance(o) for o in out]
+            if dist[0] > dist[1]:  # flip the order
+                out = [out[1],out[0]]
+        return out
 
     def plot(self,ax=None,color=None,alpha=0.6,cmap='viridis'):
         """ Make a 3-D plot """
@@ -645,9 +759,9 @@ class HalfSphere(Surface):
         # Generate sphere coordinates
         u = np.linspace(0, 2 * np.pi, 100)
         v = np.linspace(0, np.pi/2, 100)
-        x = np.outer(self.radius*np.cos(u), self.radius*np.sin(v))
-        y = np.outer(self.radius*np.sin(u), self.radius*np.sin(v))
-        z = np.outer(self.radius*np.ones(np.size(u)), self.radius*np.cos(v))
+        x = np.outer(np.cos(u), np.sin(v))*self.radius
+        y = np.outer(np.sin(u), np.sin(v))*self.radius
+        z = np.outer(np.ones(np.size(u)), np.cos(v))*self.radius
         # Rotate
         pos = np.zeros((3,100*100),float)
         pos[0,:] = x.ravel()
@@ -728,10 +842,23 @@ class Parabola(Surface):
         # line in parametric form
         # substitute x/y/z in parabola equation for the line parametric equations
         # solve quadratic equation in t
-        rline = line.rotate(self.normal)
-        intpts = utils.intersect_line_parabola(line,self)
-        return intpts
-
+        #rline = line.rotate(self.normal)
+        #intpts = utils.intersect_line_parabola(line,self)
+        #return intpts
+        if isinstance(line,ray.Ray):
+            l = Line(ray.position.data,ray.normal.data)
+        elif isinstance(line,Line):
+            l = line
+        else:
+            raise ValueError('input must be Line or Ray')
+        out = utils.intersect_line_parabola(l,self)
+        # Sort by distance if ray/line has a position
+        if len(out)>1 and hasattr(l,'position'):
+            dist = [l.position.distance(o) for o in out]
+            if dist[0] > dist[1]:  # flip the order
+                out = [out[1],out[0]]
+        return out
+    
     @property
     def focus(self):
         """ Position of the focus."""
