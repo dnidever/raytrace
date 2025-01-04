@@ -396,9 +396,9 @@ def intersect_line_parabola(line,parabola):
     B = 2*rline.point[0]*rline.slopes[0] + 2*rline.point[1]*rline.slopes[1] - rline.slopes[2]/a
     C = rline.point[0]**2 + rline.point[1]**2 - rline.point[2]/a
     discriminant = B**2-4*A*C
-
+    
     # Quadratic term is zero, now just a linear equation
-    if A==0:
+    if np.abs(A)<1e-20:
         # B*t + C = 0
         if B!=0:
             t = [-C/B]
@@ -416,27 +416,23 @@ def intersect_line_parabola(line,parabola):
         # 0 solutions
         elif discriminant < 0:
             t = []
-
+            
     # Get the points
     #   just plug t into the line
     out1 = []
     for i in range(len(t)):
-        pt = line(t[i])
+        pt = rline(t[i])
         out1.append(pt)
 
     # We need to rotate the points back to the original frame
     out = []
-    rot = parabola.normal.rotation_matrix
-    for i in range(len(sout)):
+    rot = parabola.normal.rotation_matrix.T
+    for i in range(len(out1)):
         pt = out1[i].copy()
         pt2 = np.matmul(pt,rot)
         pt2 += parabola.center
         out.append(pt2)
-        
-    print(out)
     
-    #import pdb; pdb.set_trace()
-        
     return out
 
 

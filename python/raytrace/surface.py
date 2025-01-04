@@ -77,9 +77,7 @@ class Point(object):
         else:
             cen = np.zeros(3,float)
         newdata -= cen
-        # the rotation matrix rotates a vector to the normal vector
-        # to rotate the coordinates we need to use the inverse (transpose)
-        rot = obj.normal.rotation_matrix.T
+        rot = obj.normal.rotation_matrix
         newdata = np.matmul(newdata,rot)
         newpnt = Point(newdata)
         return newpnt
@@ -344,6 +342,11 @@ class NormalVector(Vector):
         pos = np.array(value).astype(float)
         self.__data = pos
 
+    @property
+    def angles(self):
+        """ Return the phi and theta angles """
+        return self.phi,self.theta
+        
     @classmethod
     def fromangles(cls,phi,theta,degrees=False):
         """ Construct NormalVector from phi/theta angles """
@@ -440,19 +443,10 @@ class Line(object):
     
     def toframe(self,obj):
         """ Return a version of line transformed to the frame of the input object."""
-        newline = self.copy()
-        # translation
-        if hasattr(obj,'center')==False:
-            raise ValueError('input object must have a center')
-        newline.point -= obj.center
-        # rotation
-        if hasattr(obj,'normal')==False:
-            raise ValueError('input object must have a normal')
-        rot = obj.normal.rotation_matrix
-        newpoint = np.matmul(newline.point,rot.T)
-        newslopes = np.matmul(newline.slopes,rot.T)
-        newline.point = newpoint
-        newline.slopes = newslopes
+        # transform two points along the line and then make a new Line out of those
+        pnt1 = Point(self(0)).toframe(obj)
+        pnt2 = Point(self(1)).toframe(obj)
+        newline = Line.frompoints(pnt1,pnt2)
         return newline
         
     def __repr__(self):
@@ -835,6 +829,16 @@ class Parabola(Surface):
         else:
             pnt = Point(obj)
         return np.linalg.norm(self.center-pnt)
+
+    def onsurface(self,pnt):
+        """ Check if the point is on the surface """
+        pnt2 = Point(pnt).toframe(self)
+        x0,y0,z0 = pnt2.data
+        z = self.a*(x0**2+y0**2)
+        if np.abs(z-z0) < 1e-6:
+            return True
+        else:
+            return False
         
     def intersections(self,line):
         """ Return the intersection points """
@@ -894,17 +898,17 @@ class Parabola(Surface):
         #X, Y = np.meshgrid(xarr, yarr)
         Z = self.a*(X**2+Y**2)
         # Rotate
-        pos = np.zeros((3,50*50),float)
-        pos[0,:] = X.ravel()
-        pos[1,:] = Y.ravel()
-        pos[2,:] = Z.ravel()
-        pos = np.matmul(self.normal.rotation_matrix,pos)
+        pos = np.zeros((50*50,3),float)
+        pos[:,0] = X.ravel()
+        pos[:,1] = Y.ravel()
+        pos[:,2] = Z.ravel()
+        pos = np.matmul(pos,self.normal.rotation_matrix.T)
         # translate
-        x = pos[0,:] + self.position.x
+        x = pos[:,0] + self.position.x
         x = x.reshape(50,50)
-        y = pos[1,:] + self.position.y
+        y = pos[:,1] + self.position.y
         y = y.reshape(50,50)
-        z = pos[2,:] + self.position.z
+        z = pos[:,2] + self.position.z
         z = z.reshape(50,50)        
         # Plot the sphere
         ax.plot_surface(x, y, z, rstride=4, cstride=4, color=color, alpha=alpha,
