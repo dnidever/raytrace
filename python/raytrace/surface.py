@@ -321,6 +321,12 @@ class Vector(object):
     def copy(self):
         return Vector(self.data.copy())
 
+    def __eq__(self, b):
+        return (self.__class__==b.__class__) and np.all(self.data == b.data)
+    
+    def __ne__(self, b):
+        return (self.__class__!=b.__class__) or np.any(self.data == b.data)
+    
     
 class NormalVector(Vector):
     """ Normal vector."""
@@ -470,7 +476,14 @@ class Line(object):
     def copy(self):
         return Line(self.point.copy(),self.slopes.copy())
 
-
+    def __eq__(self, b):
+        return ((self.__class__==b.__class__) and np.all(self.point==b.point) and
+                np.all(self.slopes==b.slopes))
+    
+    def __ne__(self, b):
+        return ((self.__class__!=b.__class__) or np.any(self.point!=b.point) or
+                np.any(self.slopes!=b.slopes))
+    
 # circle
 # ellipse
 # cylinder
@@ -614,6 +627,12 @@ class Plane(Surface):
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         return ax
+
+    def __eq__(self, b):
+        return ((self.__class__==b.__class__) and np.all(self.data==b.data))
+    
+    def __ne__(self, b):
+        return ((self.__class__!=b.__class__) or np.any(self.data!=b.data))
     
 
 class Sphere(Surface):
@@ -677,6 +696,14 @@ class Sphere(Surface):
         ax.set_zlabel('Z')
         return ax
 
+    def __eq__(self, b):
+        return ((self.__class__==b.__class__) and np.all(self.data==b.data) and
+                 (self.position==b.position))
+    
+    def __ne__(self, b):
+        return ((self.__class__!=b.__class__) or np.any(self.data!=b.data) or
+                 (self.position!=b.position))
+    
     
 class HalfSphere(Surface):
 
@@ -776,7 +803,15 @@ class HalfSphere(Surface):
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         return ax
+
+    def __eq__(self, b):
+        return ((self.__class__==b.__class__) and np.all(self.data==b.data) and
+                (self.position==b.position) and (self.normal==b.normal))
     
+    def __ne__(self, b):
+        return ((self.__class__!=b.__class__) or np.any(self.data!=b.data) or
+                (self.position!=b.position) or (self.normal!=b.normal))
+
     
 class Parabola(Surface):
 
@@ -917,3 +952,12 @@ class Parabola(Surface):
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         return ax
+
+    def __eq__(self, b):
+        return ((self.__class__==b.__class__) and (self.a==b.a) and
+                (self.position==b.position) and (self.normal==b.normal))
+    
+    def __ne__(self, b):
+        return ((self.__class__!=b.__class__) or (self.a!=b.a) or
+                (self.position!=b.position) or (self.normal!=b.normal))
+    

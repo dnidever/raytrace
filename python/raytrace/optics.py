@@ -8,21 +8,21 @@ from . import ray
 class Optics(object):
     """ Main class for optical elements """
 
-    def __init__(self,index_of_refraction=None,position=None,orientation=None):
+    def __init__(self,index_of_refraction=None,position=None,normal=None):
         self.index_of_refraction = index_of_refraction
-        self.position = position
-        self.orientation = orientation
+        self.position = surface.Point(position)
+        self.normal = surface.NormalVector(normal)
 
     def __call__(self,ray):
-        """ process the light ray through the optical element."""
+        """ Process the light ray through the optical element."""
         pass
         
     def intersect(self,ray):
-        """ does a ray intersect with us."""
+        """ Does a ray intersect with us."""
         pass
 
     def intersectpoint(self,ray):
-        """ find first point of intersection."""
+        """ Find first point of intersection."""
         pass
 
 
@@ -32,7 +32,33 @@ class Lens(Optics):
         super().__init__(**kw)
         self.topsurface = topsurface
         self.bottomsurface = bottomsurface
+        # this radius is the extent of the lens
         self.radius = radius
+
+    def __call__(self,ray):
+        """ Process the light ray through the optical element."""
+        pass
+    
+    def topintersections(self,ray):
+        """ Return intersections of the top """
+        tpnt = self.topsurface.intersections(ray)
+        # impose radius
+        return tpnt
+        
+    def bottomintersections(self,ray):
+        """ Return intersections of the bottom """
+        bpnt = self.bottomsurface.intersections(ray)
+        # impose radius
+        return bpnt
+        
+    def dointersect(self,ray):
+        """ Does the ray intersect the surface """
+        tpnt = self.topintersections(ray)
+        bpnt = self.bottomintersections(ray)
+        if len(tpnt)>0 or len(bpnt)>0:
+            return False
+        else:
+            return True
 
 
 class Plane(Optics):
