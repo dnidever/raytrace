@@ -41,8 +41,22 @@ class FlatMirror(Optics):
 
     def __call__(self,ray):
         """ Process a ray """
+        # Get intersections
+        tpnt = self.intersections(ray)
+        # Find the angle relative to the surface+normal
+        #  to get the reflection
+        # Update the ray's path
         pass
 
+    def reflection(self,ray,point):
+        """ Figure out the reflection for a ray at a specific reflection point """
+        # get the angle the ray makes with the surface
+        # then reflect it
+        # return the line of the reflected ray
+        
+        reflected_line = Line(point,norm_reflected)
+        return reflected_line
+    
     def dointersect(self,ray):
         """ Does a ray intersect with us."""
         pass

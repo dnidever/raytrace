@@ -6,6 +6,8 @@ import copy
 from scipy.spatial.transform import Rotation
 from . import utils,ray
 
+EPSILON = 1e-10
+
 class Point(object):
     """ Class for a point."""
 
@@ -269,6 +271,57 @@ class Vector(object):
         """ Return the azimuthal angle (angle from positive x-axis) in degrees."""
         return np.rad2deg(np.arctan2(self.data[1],self.data[0]))
 
+    def dot(self,value):
+        """ Return dot product of two vectors """
+        if issubclass(value.__class__,self.__class__):
+            data = value.data
+        else:
+            data = np.atleast_1d(value).astype(float)
+            if data.size != 3:
+                raise ValueError('must have three values')
+        return np.dot(self.data,data)
+
+    def cross(self,value):
+        """ Return cross product of two vectors """
+        if issubclass(value.__class__,self.__class__):
+            data = value.data
+        else:
+            data = np.atleast_1d(value).astype(float)
+            if data.size != 3:
+                raise ValueError('must have three values')
+        cp = np.cross(self.data,data)
+        return self.__class__(cp)
+    
+    def isparallel(self,value):
+        """ Check if a vector is parallel """
+        if issubclass(value.__class__,self.__class__):
+            data = value.data
+        else:
+            data = np.atleast_1d(value).astype(float)
+            if data.size != 3:
+                raise ValueError('must have three values')
+        # if the cross-product of two vectors is zero, then they are parallel
+        cp = np.cross(self.data,data)
+        if np.linalg.norm(cp) < EPSILON:
+            return True
+        else:
+            return False
+
+    def isperpendicular(self,value):
+        """ Check if a vector is perpendicular """
+        if issubclass(value.__class__,self.__class__):
+            data = value.data
+        else:
+            data = np.atleast_1d(value).astype(float)
+            if data.size != 3:
+                raise ValueError('must have three values')
+        # calculate dot product, zero if they orthogonal
+        dotproduct = np.dot(self.data,data)
+        if np.abs(dotproduct) < EPSILON:
+            return True
+        else:
+            return False
+        
     @property
     def rotation_matrix(self):
         """ Return the rotation matrix that will rotate you into this frame."""
@@ -321,12 +374,126 @@ class Vector(object):
     def copy(self):
         return Vector(self.data.copy())
 
+    # arithmetic operations
+    def _check_value(self,value):
+        """ Check that the input value is okay """
+        if len(np.atleast_1d(value)) != 1 and len(np.atleast_1d(value)) != 3:
+            raise ValueError('Value must have 1 or 3 elements')
+            
+    def __add__(self, value):
+        if issubclass(value.__class__,self.__class__):
+            data = self.data + value.data
+        else:
+            self._check_value(value)
+            if len(np.atleast_1d(value))==1: value=np.atleast_1d(value)[0]
+            data = self.data + value
+        return self.__class__(data)
+        
+    def __iadd__(self, value):
+        if issubclass(value.__class__,self.__class__):
+            data = value.data
+        else:
+            self._check_value(value)
+            if len(np.atleast_1d(value))==1: value=np.atleast_1d(value)[0]
+            data = value
+        self.data += data
+        return self
+        
+    def __radd__(self, value):
+        return self + value
+        
+    def __sub__(self, value):
+        newdata = self.data.copy()
+        if issubclass(value.__class__,self.__class__):
+            data = self.data
+            newdata -= value.data
+        else:
+            self._check_value(value)
+            if len(np.atleast_1d(value))==1: value=np.atleast_1d(value)[0]
+            newdata -= value
+        return self.__class__(newdata)
+              
+    def __isub__(self, value):
+        if issubclass(value.__class__,self.__class__):
+            self.data -= value.data
+        else:
+            self._check_value(value)
+            if len(np.atleast_1d(value))==1: value=np.atleast_1d(value)[0]
+            self.data -= value
+        return self
+
+    def __rsub__(self, value):
+        return self - value        
+    
+    def __mul__(self, value):
+        newdata = self.data.copy()
+        if issubclass(value.__class__,self.__class__):
+            newdata *= value.data
+        else:
+            self._check_value(value)
+            if len(np.atleast_1d(value))==1: value=np.atleast_1d(value)[0]
+            newdata *= value
+        return self.__class__(newdata)
+               
+    def __imul__(self, value):
+        if issubclass(value.__class__,self.__class__):
+            self.data *= value.data
+        else:
+            self._check_value(value)
+            if len(np.atleast_1d(value))==1: value=np.atleast_1d(value)[0]
+            self.data *= value
+        return self
+    
+    def __rmul__(self, value):
+        return self * value
+               
+    def __truediv__(self, value):
+        newdata = self.data.copy()
+        if issubclass(value.__class__,self.__class__):
+            newdata /= value.data
+        else:
+            self._check_value(value)
+            if len(np.atleast_1d(value))==1: value=np.atleast_1d(value)[0]
+            newdata /= value
+        return self.__class__(newdata)
+      
+    def __itruediv__(self, value):
+        if issubclass(value.__class__,self.__class__):
+            self.data /= value.data
+        else:
+            self._check_value(value)
+            if len(np.atleast_1d(value))==1: value=np.atleast_1d(value)[0]
+            self.data /= value
+        return self
+
+    def __rtruediv__(self, value):
+        data = self.data.copy()
+        if issubclass(value.__class__,self.__class__):
+            newdata = value.data / data
+        else:
+            self._check_value(value)
+            if len(np.atleast_1d(value))==1: value=np.atleast_1d(value)[0]
+            newdata = value / data
+        return self.__class__(newdata)
+
+    def __lt__(self, b):
+        return self.r < b.r
+    
+    def __le__(self, b):
+        return self.r <= b.r
+
     def __eq__(self, b):
         return (self.__class__==b.__class__) and np.all(self.data == b.data)
     
     def __ne__(self, b):
-        return (self.__class__!=b.__class__) or np.any(self.data == b.data)
+        return ~self.__eq__(b)
     
+    def __ge__(self, b):
+        return self.r >= b.r
+    
+    def __gt__(self, b):
+        return self.r > b.r
+
     
 class NormalVector(Vector):
     """ Normal vector."""
@@ -334,8 +501,7 @@ class NormalVector(Vector):
     def __init__(self,data):
         if len(data)!=3:
             raise ValueError('data needs three elements')
-        self.__data = np.array(data).astype(float)
-        self.__data /= np.linalg.norm(self.__data)   # normalize
+        self.data = data
 
     @property
     def data(self):
@@ -346,6 +512,11 @@ class NormalVector(Vector):
         if len(value)!=3:
             raise ValueError('value needs three elements')
         pos = np.array(value).astype(float)
+        # normalize
+        r = np.linalg.norm(pos)
+        if r == 0:
+            raise ValueError('Vector cannot have zero length')
+        pos /= r
         self.__data = pos
 
     @property
@@ -459,6 +630,56 @@ class Line(object):
         s = 'Line([(x,y,z)=({:.3f},{:.3f},{:.3f})+t({:.3f},{:.3f},{:.3f}))'.format(*self.point,*self.slopes)
         return s
 
+    def isparallel(self,b):
+        """ Figure out if a line is parallel """
+        if isinstance(b,Line)==False:
+            raise ValueError('b must be a Line object')
+        # direction vectors must be parallal
+        normal1 = self.slopes.copy()
+        r1 = np.linalg.norm(normal1)
+        if r1 > 0: normal1 /= r1
+        normal2 = b.slopes.copy()
+        r2 = np.linalg.norm(normal2)
+        if r2 > 0: normal2 /= r2
+        if np.sum(np.abs(normal1-normal2)) < EPSILON:
+            return True
+        else:
+            return False
+
+    def isonline(self,point):
+        """ Check if a point is on the line """
+        if isinstance(point,Point):
+            cen = point.data
+        else:
+            cen = np.array(point).astype(float)
+        # Plug point into line parametric equations and see if there is a solution
+        #  x02 = x01 + a*t
+        #  y02 = y01 + b*t
+        #  z02 = z01 + c*t
+        # there should be a t value that satisfies all three equations
+        #  t = (x02-x01)/a
+        #  if a=0, then we have x02=x01
+        t = []
+        for i in range(3):
+            if self.slopes[i]==0:
+                if cen[i] != self.point[i]:
+                    return False
+            else:
+                t.append((cen[i]-self.point[i])/self.slopes[i])
+        # if there are multiple t's, then make sure they are the same
+        if len(t)==1:
+            return True
+        elif len(t)==2:
+            if np.abs(t[0]-t[1]) < EPSILON:
+                return True
+            else:
+                return False
+        elif len(t)==3:
+            if np.abs(t[0]-t[1]) < EPSILON and np.abs(t[0]-t[2]) < EPSILON:
+                return True
+            else:
+                return False
+            
     def plot(self,t=None,ax=None,color=None):
         """ Make a 3-D plot at input points t."""
         if t is None:
@@ -477,12 +698,24 @@ class Line(object):
         return Line(self.point.copy(),self.slopes.copy())
 
     def __eq__(self, b):
-        return ((self.__class__==b.__class__) and np.all(self.point==b.point) and
-                np.all(self.slopes==b.slopes))
-    
+        # Equality is more complicated because two lines can have different points
+        # need to do this carefully
+        # Parametric form for 3-D line
+        # (x,y,z) = (x0,y0,z0)+t(a,b,c)
+        sameclass = (self.__class__==b.__class__)
+        isparallel = False
+        # Check that they are parallel
+        if sameclass:
+            isparallel = self.isparallel(b)
+        # Check that the points on on the line
+        isonline = False
+        if sameclass and isparallel:
+            # check that point2 is on line1
+            isonline = self.isonline(b.point)
+        return (sameclass and isparallel and isonline)
+            
     def __ne__(self, b):
-        return ((self.__class__!=b.__class__) or np.any(self.point!=b.point) or
-                np.any(self.slopes!=b.slopes))
+        return ~self.__eq__(b)
     
 # circle
 # ellipse
@@ -616,6 +849,23 @@ class Plane(Surface):
             dist = np.nan
         return dist
 
+    def isparallel(self,line):
+        """ Check if a line of ray is parallel to the plane """
+        # check if the line normal is orthogonal to the plane's normal vector
+        # calculate dot product, zero if they orthogonal
+        if isinstance(line,Line):
+            norm = NormalVector(line.slopes)
+            pass
+        elif isinstance(line,ray.Ray):
+            pass
+        else:
+            raise ValueError('Can only check Line or Ray')
+        
+
+    def isonplane(self,point):
+        """ Check if a point lies on the plane """
+        pass
+    
     def intersections(self,line):
         """ Return the intersection points """
         if isinstance(line,ray.Ray):
@@ -889,7 +1139,7 @@ class Parabola(Surface):
         pnt2 = Point(pnt).toframe(self)
         x0,y0,z0 = pnt2.data
         z = self.a*(x0**2+y0**2)
-        if np.abs(z-z0) < 1e-6:
+        if np.abs(z-z0) < EPSILON:
             return True
         else:
             return False
