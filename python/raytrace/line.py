@@ -31,6 +31,8 @@ class Point(object):
     """ Class for a point."""
 
     def __init__(self,position):
+        if isinstance(position,Point):
+            position = position.data
         if len(position)!=3:
             raise ValueError('Point needs three elements')
         if isinstance(position,Point):
@@ -239,6 +241,8 @@ class Vector(object):
     """ Vector """
 
     def __init__(self,data):
+        if issubclass(data.__class__,Vector):
+            data = data.data
         self.data = data
 
     @property
@@ -358,6 +362,27 @@ class Vector(object):
             return True
         else:
             return False
+
+    def reflectabout(self,v):
+        """ Reflect ourselves about vector v """
+        if issubclass(v.__class__,Vector):
+            data = v.data
+        else:
+            data = np.atleast_1d(v).astype(float)
+        # We can use the dot product to project ourselves
+        #  onto v
+        dp = np.dot(self.data,data)
+        projected_on_v = dp/np.linalg.norm(data)
+        parallel_to_v = projected_on_v * data/np.linalg.norm(data)
+        # Now we need the vector that is perpendicular to v
+        # we can get this by using vector addition/subtraction
+        # self = parallel_to_v + perpendicular_to_v
+        # perpendicular_to_v = self - parallel_to_v
+        perpendicular_to_v = self.data - parallel_to_v
+        # To perform the reflection, we have to flip the
+        # perpendicular component, just take the negative
+        reflected = parallel_to_v - perpendicular_to_v
+        return self.__class__(reflected)
         
     @property
     def rotation_matrix(self):
@@ -536,6 +561,8 @@ class NormalVector(Vector):
     """ Normal vector."""
 
     def __init__(self,data):
+        if issubclass(data.__class__,Vector):
+            data = data.data
         if len(data)!=3:
             raise ValueError('data needs three elements')
         self.data = data
@@ -905,7 +932,7 @@ class Ray(object):
     def __eq__(self, b):
         if (self.__class__==b.__class__ and
             np.sum(np.abs(self.position.data-b.position.data)) < EPSILON and
-            np.sum(np.abs(self.normal.data-b.normal.data)) < EPSILON)):
+            np.sum(np.abs(self.normal.data-b.normal.data)) < EPSILON):
             return True
         else:
             return False

@@ -14,12 +14,11 @@ class LightRay(object):
     # Needs to keep track of the past points and normals
     
     def __init__(self,wavelength,position,normal):
+        self.__history = []
         # wavelength in meters
         self.wavelength = wavelength
         self.ray = line.Ray(position,normal)
-        self.__path = []
         self.state = 'inflight'
-        self.addpath(position)   # add current position to the path
         
     @property
     def wavelength(self):
@@ -39,26 +38,57 @@ class LightRay(object):
     def state(self,value):
         if value not in lightray_states:
             raise ValueError('Not a recognized LightRay state')
-        self.__state = state
+        self.__state = value
 
-    def addtopath(self,point):
-        """ Add a point to the path """
-        if isinstance(point,line.Point):
-            data = point.data.copy()
-        else:
-            data = np.atleast_1d(point).astype(float)
-            if len(data) != 3:
-                raise ValueError('Point must have 3 elements')
-        self.path.append(data)
+    @property
+    def ray(self):
+        return self.__ray
 
+    @ray.setter
+    def ray(self,value):
+        if isinstance(value,line.Ray)==False:
+            raise ValueError('Must be Ray')
+        self.__ray = value
+        # Save both the position and normal values
+        #  the setter will append it to the history
+        self.history = (value.position.data.copy(),value.normal.data.copy())
+        
+    @property
+    def history(self):
+        return self.__history
+
+    @history.setter
+    def history(self,value):
+        self.__history.append(value)
+    
     @property
     def path(self):
         """ Return the path """
-        return self.__path
+        return np.atleast_2d([r[0] for r in self.history])
+
+    # def addtopath(self,point):
+    #     """ Add a point to the path """
+    #     if isinstance(point,line.Point):
+    #         data = point.data.copy()
+    #     else:
+    #         data = np.atleast_1d(point).astype(float)
+    #         if len(data) != 3:
+    #             raise ValueError('Point must have 3 elements')
+    #     self.path.append(data)
+
+    @property
+    def position(self):
+        return self.ray.position
+
+    @property
+    def normal(self):
+        return self.ray.normal
+        
+
         
     def __repr__(self):
-        dd = (self.wavelength,*self.position.data,*self.normal.data)
-        s = 'Ray(wave={:.3e},p=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f}])'.format(*dd)
+        dd = (self.state,self.wavelength,*self.position.data,*self.normal.data)
+        s = 'LightRay({:},wave={:.3e},o=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f}])'.format(*dd)
         return s
         
     @property
@@ -72,7 +102,7 @@ class LightRay(object):
         # E = h*f
         return hplanck*self.frequency
     
-    def plot(self,ax=None,color=None):
+    def plot(self,ax=None,color=None,alpha=0.8):
         """ Make a 3-D plot of the ray """
         import matplotlib.pyplot as plt
         if ax is None:
@@ -81,27 +111,27 @@ class LightRay(object):
         npnts = coords.shape[0]
         # Always draw lines between all the path points (if more than 1)
         if npnts>1:
-            ax.plot(coords[:,0],coords[:,1],coords[:,2],color=color)
+            ax.plot(coords[:,0],coords[:,1],coords[:,2],color=color,alpha=alpha)
             # Add point for initial position
-            ax.scatter(coords[0,0],coords[0,1],coords[0,2],s=20,color='r')
+            ax.scatter(coords[0,0],coords[0,1],coords[0,2],s=20,color='r',alpha=alpha)
         # Add point for current position
-        ax.scatter(coords[-1,0],coords[-1,1],coords[-1,2],s=20,color='green')
+        ax.scatter(coords[-1,0],coords[-1,1],coords[-1,2],s=20,color='green',alpha=alpha)
         # If it is still 'inflight', then add arrow at the end
         if self.state=='inflight':
-            x0,y0,z0 = coords[-1,:]
-            x = x0 + self.normal.data[0]*3
-            y = y0 + self.normal.data[1]*3
-            z = z0 + self.normal.data[2]*3
-            ax.quiver(x0, y0, z0, x, y, z, arrow_length_ratio=0.1,color=color)
+            x,y,z = coords[-1,:]
+            u,v,w = self.normal.data
+            # x/y/z is the position of the arrow (by default the tail)
+            # u/v/w are the components of the arrow vectors
+            ax.quiver(x, y, z, u, v, w, color='k',linewidth=2,alpha=alpha) #arrow_length_ratio=0.1,color=color)
         xr = [np.min(coords[:,0]),np.max(coords[:,0])]
-        dx = np.maximum(np.ptp(xr),1)
-        xr = [xr[0]-0.1*dx,xr[1]+0.1*dx]
+        dx = np.maximum(np.ptp(xr)*0.1,1)
+        xr = [xr[0]-dx,xr[1]+dx]
         yr = [np.min(coords[:,1]),np.max(coords[:,1])]
-        dy = np.maximum(np.ptp(yr),1)
-        yr = [yr[0]-0.1*dy,yr[1]+0.1*dy]
+        dy = np.maximum(np.ptp(yr)*0.1,1)
+        yr = [yr[0]-dy,yr[1]+dy]
         zr = [np.min(coords[:,2]),np.max(coords[:,2])]
-        dz = np.maximum(np.ptp(zr),1)
-        zr = [zr[0]-0.1*dz,zr[1]+0.1*dz]
+        dz = np.maximum(np.ptp(zr)*0.1,1)
+        zr = [zr[0]-dz,zr[1]+dz]
         ax.set_xlim(xr)
         ax.set_ylim(yr)
         ax.set_zlim(zr)

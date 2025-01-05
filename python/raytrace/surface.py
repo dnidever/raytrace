@@ -1,4 +1,4 @@
-# Optical surface
+# Surfaces
 
 import os
 import numpy as np
@@ -53,6 +53,10 @@ class Surface(object):
         """ Return distance of point/object to the center of the surface."""
         pass
 
+    def normalatpoint(self,point):
+        """ Return the normal at a certain point """
+        pass
+    
     def toframe(self,obj):
         """ Return a copy of ourselves transformed into the frame of the input object """
         # translation
@@ -116,20 +120,20 @@ class Plane(Surface):
     @classmethod
     def fromnormalcenter(cls,normal,position):
         """ Class method to construct a Plen from a normal and center """
-        if isinstance(normal,Normal):
+        if isinstance(normal,NormalVector):
             norm = normal.data.copy()
         else:
-            norm = normal
+            norm = np.atleast_1d(normal).astype(float)
         if isinstance(position,Point):
             cen = position.data.copy()
         else:
-            cen = np.array(position).astype(float)
+            cen = np.atleast_1d(position).astype(float)
         # Equation of a plane in 3D
         # a*x + b*y + c*z + d = 0
         # the normal vector is (a,b,c)
         # to solve for d, put the x/y/z center values in the equation and solve for d
         # d = -(a*x0+b*y0+c*z0)
-        d = -np.sum(norm[0]*cen[0]*norm[1]*cen[1]+norm[2]*cen[2])
+        d = -np.sum(norm*cen)
         return Plane(normal,d)
         
     @property
@@ -171,6 +175,10 @@ class Plane(Surface):
         # check if line is perpendicular to plane normal vector
         return self.normal.isperpendicular(data)
 
+    def normalatpoint(self,point):
+        """ Return the normal at a certain point """
+        return self.normal
+    
     def isperpendicular(self,line):
         """ Check if a line of ray is perpendicular to the plane """
         # check if the line normal is orthogonal to the plane's normal vector
@@ -183,18 +191,28 @@ class Plane(Surface):
         
     def ison(self,point):
         """ Check if a point lies on the plane """
+        if isinstance(point,Point):
+            data = point.data
+        else:
+            data = point
         # Plug the point coordinate into the parameteric equations
         # and see if it is true.
-        pass
+        # a*x + b*y + c*z + d = 0
+        if np.abs(np.sum(self.normal.data*data)+self.d) < EPSILON:
+            return True
+        else:
+            return False
     
     def intersections(self,line):
         """ Return the intersection points """
-        if isinstance(line,ray.Ray):
-            l = Line(ray.position.data,ray.normal.data)
+        if isinstance(line,lightray.LightRay):
+            l = Line(line.ray.position.data,line.ray.normal.data)
+        elif isinstance(line,Ray):
+            l = Line(line.position.data,line.normal.data)
         elif isinstance(line,Line):
             l = line
         else:
-            raise ValueError('input must be Line or Ray')
+            raise ValueError('input must be Line, Ray or LightRay')
         out = utils.intersect_line_plane(l,self)
         return out
         
@@ -241,7 +259,11 @@ class Sphere(Surface):
         dd = (*self.position.data,self.radius)
         s = 'Sphere(o=[{:.3f},{:.3f},{:.3f}],radius={:.3f})'.format(*dd)
         return s
-        
+
+    def normalatpoint(self,point):
+        """ Return the normal at a certain point """
+        raise NotImplemented
+    
     def distance(self,obj):
         if hasattr(obj,center):
             pnt = obj.center
@@ -251,6 +273,8 @@ class Sphere(Surface):
             pnt = Point(obj)
         return np.linalg.norm(self.center-pnt)
 
+        return self.normal
+    
     def intersections(self,line):
         """ Return the intersection points """
         if isinstance(line,ray.Ray):
@@ -332,6 +356,10 @@ class HalfSphere(Surface):
             pnt = Point(obj)
         return np.linalg.norm(self.center-pnt)
 
+    def normalatpoint(self,point):
+        """ Return the normal at a certain point """
+        raise NotImplemented
+    
     @property
     def bottomplane(self):
         """ Return the plane of the bottom of the half sphere """
@@ -455,7 +483,11 @@ class Parabola(Surface):
             pnt = Point(obj)
         return np.linalg.norm(self.center-pnt)
 
-    def onsurface(self,pnt):
+    def normalatpoint(self,point):
+        """ Return the normal at a certain point """
+        raise NotImplemented
+    
+    def ison(self,pnt):
         """ Check if the point is on the surface """
         pnt2 = Point(pnt).toframe(self)
         x0,y0,z0 = pnt2.data
