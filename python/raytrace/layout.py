@@ -168,3 +168,20 @@ class Layout(object):
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         return ax
+
+
+class Enclosure(object):
+
+    # opaque enclosure surrounding the whole optical system
+    
+    def __init__(self,vertices):
+        self.vertices
+
+    def __call__(self,ray):
+        pass
+        
+    def intersections(self,ray):
+        pass
+
+    def plot(self):
+        pass
