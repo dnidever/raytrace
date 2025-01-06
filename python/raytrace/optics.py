@@ -4,7 +4,7 @@ import os
 import numpy as np
 from . import surface,utils
 from .lightray import LightRay
-from .line import Point,NormalVector,Line,Ray
+from .line import Point,Vector,NormalVector,Line,Ray
 
 valid_optics = [FlatMirror]
 
@@ -63,6 +63,26 @@ class FlatMirror(Optics):
         self.__vertices = vert
         # Construct vertices in the reference frame of the mirror
         self.vertices_inframe = self.toframe(vert)
+
+    @classmethod
+    def fromvertices(cls,vertices):
+        """ Class method to construct the """
+        import pdb; pdb.set_trace()
+        # Use the handedness of the vertices to figure out the direction
+        vert = np.atleast_2d(vertices).astype(float)
+        if vert.ndim != 2 or vert.shape[1]!=3:
+            raise ValueError('Vertices must have shape of [N,3]')
+        # Get position by taking the mean of the vertex values
+        position = np.mean(vert,axis=0)
+        # To make the normal use the first two vertices to construct
+        #  one vector and the next two to construct a second vector
+        #  then take the cross-product to get the normal vector
+        # If the first two vectors are parallel, then go to the next
+        #  two vertices until you find on that isn't parallel.
+        v1 = NormalVector(vert[1,:]-vert[0,:])
+        v2 = NormalVector(vert[2,:]-vert[1,:])
+        normal = v1.cross(v2)
+        return FlatMirror(position,normal,vert)
         
     @property
     def nvertices(self):
