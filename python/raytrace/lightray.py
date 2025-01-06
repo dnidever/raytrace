@@ -52,6 +52,7 @@ class LightRay(object):
         # Save both the position and normal values
         #  the setter will append it to the history
         self.history = (value.position.data.copy(),value.normal.data.copy())
+        # should we also keep track of the optical element we reflected/refracted off of?
         
     @property
     def history(self):

@@ -4,10 +4,13 @@ import os
 import numpy as np
 from . import optics
 
+EPSILON = 1e-10
+
 class Layout(object):
 
     def __init__(self,elements=None):
         self.__elements = []
+        self.elements = elements
 
     @property
     def elements(self):
@@ -19,12 +22,15 @@ class Layout(object):
         # if it's a list, then iteration of the list
         if isinstance(value,list)==False and isinstance(value,tuple)==False:
             value = [value]
-        for i in range(len(value)):
+        for i,elem in enumerate(value):
             # Check that this is a valid optical element
-            if value.__class__ not in optics.valid_optics:
-                raise ValueError('Must be a valid optical element')
-            self.__elements.append(value)
+            #if elem.__class__ not in optics.valid_optics:
+            #    raise ValueError('Must be a valid optical element')
+            self.__elements.append(elem)
 
+    def append(self,value):
+        self.elements = value
+            
     @property
     def nelements(self):
         return len(self.elements)
@@ -32,7 +38,7 @@ class Layout(object):
     def __len__(self):
         return self.nelements
     
-    def __class__(self,rays):
+    def __call__(self,rays,verbose=False):
         """ Process multiple light rays through the system """
         if isinstance(rays,list)==False and isinstance(rays,tuple)==False:
             rays = [rays]
@@ -40,25 +46,48 @@ class Layout(object):
         # Loop over rays
         newrays = nrays*[None]
         for i in range(nrays):
-            newrays.append(self.processray(rays[i]))
+            newrays[i] = self.processray(rays[i],verbose=verbose)
         if nrays==1:
             newrays = newrays[0]
         return newrays
         # do we even need to return the rays since they are changed in place
         
-    def processray(self,ray):
+    def processray(self,ray,verbose=False):
         """ Process a single light ray through the system """
         # Loop since there can be multiple reflections/refractions
         #   stop when the ray does not intersect any elements anymore
+        count = 0
         intersects = self.intersections(ray)
         while len(intersects)>0:
+            # Exclude the surface that we are currently on, distance=0
+            if count>0:
+                intersects = [idata for idata in intersects if np.abs(idata[2])>EPSILON]
             # Determine which element it will hit first
-            # find distances
-            dists = [i[2] for i in intersects]
-            import pdb; pdb.set_trace()
-            
+            if len(intersects)==1:
+                bestind = 0
+                nextindex = intersects[bestind][0]
+                nextpnt = intersects[0][1]
+            elif len(intersects)>1:
+                # Find distances
+                dists = [i[2] for i in intersects]
+                dists = np.array(dists).squeeze()
+                bestind = np.argmin(dists)
+                nextpnt = intersects[bestind][1]
+                indexes = [i[0] for i in intersects]
+                nextindex = indexes[bestind]
+                import pdb; pdb.set_trace()
+            else:
+                break
+            # Process the ray through the next optical element
+            nextelem = self[nextindex]
+            if verbose:
+                print(count+1,nextindex,nextpnt)
+            ray = nextelem(ray)
+            # Find new set of intersections
             intersects = self.intersections(ray)
-        
+            count += 1
+        return ray
+
     def intersections(self,ray):
         """ Get all of the intersections of the ray with all of the elements """
         if len(self)==0:
@@ -69,9 +98,14 @@ class Layout(object):
         for i,elem in enumerate(self):
             intpnt = elem.intersections(ray)
             if len(intpnt)>0:
-                # get distances to the points
-                dists = [ray.distance(p) for p in intpnt]
-                points.append((i,intpnt,dists))
+                if isinstance(intpnt,list)==False and isinstance(intpnt,tuple)==False:
+                    intpnt = [intpnt]
+                # Loop over the intersection points, the each get their own entry
+                for j in range(len(intpnt)):
+                    pt = intpnt[j]
+                    # Get distance to the intersection point
+                    dist = ray.distance(pt)
+                    points.append((i,pt,dist))
         return points
         
     def __getitem__(self,index):
