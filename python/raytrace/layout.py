@@ -50,13 +50,30 @@ class Layout(object):
         """ Process a single light ray through the system """
         # Loop since there can be multiple reflections/refractions
         #   stop when the ray does not intersect any elements anymore
-        
-        # Determine which element it will hit 
-
+        intersects = self.intersections(ray)
+        while len(intersects)>0:
+            # Determine which element it will hit first
+            # find distances
+            dists = [i[2] for i in intersects]
+            import pdb; pdb.set_trace()
+            
+            intersects = self.intersections(ray)
         
     def intersections(self,ray):
         """ Get all of the intersections of the ray with all of the elements """
-
+        if len(self)==0:
+            return []
+        points = []
+        # Loop over the elements and find the intersections
+        #  keep track of which element it came from
+        for i,elem in enumerate(self):
+            intpnt = elem.intersections(ray)
+            if len(intpnt)>0:
+                # get distances to the points
+                dists = [ray.distance(p) for p in intpnt]
+                points.append((i,intpnt,dists))
+        return points
+        
     def __getitem__(self,index):
         if isinstance(index,int)==False and isinstance(index,slice)==False:
             raise ValueError('index must be an integer or slice')

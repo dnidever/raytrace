@@ -83,9 +83,7 @@ class LightRay(object):
     @property
     def normal(self):
         return self.ray.normal
-        
 
-        
     def __repr__(self):
         dd = (self.state,self.wavelength,*self.position.data,*self.normal.data)
         s = 'LightRay({:},wave={:.3e},o=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f}])'.format(*dd)
@@ -101,7 +99,11 @@ class LightRay(object):
     def energy(self):
         # E = h*f
         return hplanck*self.frequency
-    
+
+    def distance(self,point):
+        """ Return distance from the ray to a point """
+        return self.position.distance(point)
+        
     def plot(self,ax=None,color=None,alpha=0.8):
         """ Make a 3-D plot of the ray """
         import matplotlib.pyplot as plt
