@@ -2,9 +2,11 @@
 
 import os
 import numpy as np
-from . import surface
+from . import surface,utils
 from .lightray import LightRay
 from .line import Point,NormalVector,Line,Ray
+
+valid_optics = [FlatMirror]
 
 class Optics(object):
     """ Main class for optical elements """
@@ -36,10 +38,36 @@ class FlatMirror(Optics):
             normal = [0,0,1]
         self.position = Point(position)
         self.normal = NormalVector(normal)
-        self.vertices = vertices
         # Construct a plane object
         self.plane = surface.Plane.fromnormalcenter(normal,position)
+        self.vertices = vertices
 
+    @property
+    def vertices(self):
+        return self.__vertices
+
+    @vertices.setter
+    def vertices(self,value):
+        # Check and save the vertices
+        if value is None:
+            self.__vertices = None
+            self.vertices_inframe = None
+            return
+        vert = np.atleast_2d(value)
+        if vert.ndim != 2 or vert.shape[1]!=3:
+            raise ValueError('Vertices must have shape of [N,3]')
+        # Now check that they lie on the plane
+        onplane = [self.plane.ison(v) for v in vert]
+        if np.all(onplane)==False:
+            raise ValueError('All vertex points must lie on the plane')
+        self.__vertices = vert
+        # Construct vertices in the reference frame of the mirror
+        self.vertices_inframe = self.toframe(vert)
+        
+    @property
+    def nvertices(self):
+        return self.vertices.shape[0]
+                
     def __repr__(self):
         dd = (*self.position.data,*self.normal.data)
         s = 'FlatMirror(o=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f}])'.format(*dd)
@@ -67,7 +95,56 @@ class FlatMirror(Optics):
         else:
             #print('not a lightray')
             return reflected_ray
+
+    def distance(self,points):
+        """ Return distance to plane """
+        return self.plane.distance(points)
         
+    def toframe(self,points):
+        if isinstance(points,Point):
+            data = np.atleast_2d(points.data)
+        elif (isinstance(points,list) or isinstance(points,tuple)) and isinstance(points[0],Point):
+            data = np.atleast_2d([p.data for p in points])
+        else:
+            data = np.atleast_2d(points)
+        npts = data.shape[0]
+        newdata = [Point(d).toframe(self).data for d in data]
+        newdata = np.atleast_2d(newdata)
+        if npts==1:
+            newdata = newdata.squeeze()
+        return newdata
+        
+    def ison(self,points):
+        """ Check if a point is on the mirror and within the vertices """
+        if isinstance(points,Point):
+            data = np.atleast_2d(points.data)
+        elif (isinstance(points,list) or isinstance(points,tuple)) and isinstance(points[0],Point):
+            data = np.atleast_2d([p.data for p in points])
+        else:
+            data = np.atleast_2d(points)
+        npts = data.shape[0]
+        isonmirror = npts*[None]
+        for i in range(npts):
+            # Check if it is on the plane
+            isonplane = self.plane.ison(data[i])
+            if isonplane==False:
+                isonmirror[i] = False
+                continue
+            # Check if it is inside the vertices
+            #  rotate the points into the frame of the plane so it is a 2D problem
+            if self.vertices is None:
+                isonmirror[i] = True
+                continue
+            rvert = self.toframe(data[i])
+            # isPointInPolygon(xPolygon, yPolygon, xPt, yPt)
+            xpoly = self.vertices_inframe[:,0]
+            ypoly = self.vertices_inframe[:,1]
+            # most edges are not counted as inside
+            isonmirror[i] = utils.isPointInPolygon(xpoly,ypoly,rvert[0],rvert[1])
+        if len(isonmirror)==1:
+            isonmirror = isonmirror[0]
+        return isonmirror
+            
     def reflection(self,ray,point):
         """ Figure out the reflection for a ray at a specific point """
         # First we have to reverse the lightray's normal
@@ -93,39 +170,58 @@ class FlatMirror(Optics):
     def intersections(self,ray):
         """ Get the intersections of a ray with the detector """
         tpnt = self.plane.intersections(ray)
-        # now make sure it's within the vertices
-        #if self.vertices is not None:
-        #import pdb; pdb.set_trace()
+        # Now make sure it's within the vertices
+        if self.ison(tpnt)==False:
+            return []
         return tpnt
         
     def plot(self,ax=None,color=None,alpha=0.6):
         """ Make a 3-D plot  """
         import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d.art3d import Poly3DCollection
         if ax is None:
             ax = plt.figure().add_subplot(projection='3d')
-        # Create a grid of points
-        a,b,c,d = self.plane.data
-        if c != 0.0:
-            x = np.linspace(-5, 5, 10)
-            y = np.linspace(-5, 5, 10)
-            X, Y = np.meshgrid(x, y)
-            # Calculate the corresponding Z values for the plane
-            Z = (-d - a * X - b * Y) / c
-        elif b != 0.0:
-            x = np.linspace(-5, 5, 10)
-            z = np.linspace(-5, 5, 10)
-            X, Z = np.meshgrid(x, z)
-            # Calculate the corresponding Y values for the plane
-            Y  = (-d - a * X - c * Z) / b
-        elif a != 0.0:
-            y = np.linspace(-5, 5, 10)
-            z = np.linspace(-5, 5, 10)
-            Y, Z = np.meshgrid(y, z)
-            # Calculate the corresponding Y values for the plane
-            X  = (-d - b * Y - c * Z) / a
-        # Plot the plane
-        ax.plot_surface(X, Y, Z, alpha=alpha)
-        #ax.plot(pos[:,0],pos[:,1],pos[:,2],color=color)
+
+        if self.vertices is not None:
+            #from mpl_toolkits.mplot3d import Axes3D
+            #from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+            #import matplotlib.pyplot as plt
+            #fig = plt.figure()
+            #ax = Axes3D(fig, auto_add_to_figure=False)
+            #fig.add_axes(ax)
+            #x = [0,1,1,0]
+            #y = [0,0,1,1]
+            #z = [0,1,0,1]
+            x = self.vertices[:,0]
+            y = self.vertices[:,1]
+            z = self.vertices[:,2]
+            verts = [list(zip(x,y,z))]
+            ax.add_collection3d(Poly3DCollection(verts,lw=1,alpha=alpha))
+            ax.scatter(x,y,z,color=color)
+        else:
+            # Create a grid of points
+            a,b,c,d = self.plane.data
+            if c != 0.0:
+                x = np.linspace(-5, 5, 10)
+                y = np.linspace(-5, 5, 10)
+                X, Y = np.meshgrid(x, y)
+                # Calculate the corresponding Z values for the plane
+                Z = (-d - a * X - b * Y) / c
+            elif b != 0.0:
+                x = np.linspace(-5, 5, 10)
+                z = np.linspace(-5, 5, 10)
+                X, Z = np.meshgrid(x, z)
+                # Calculate the corresponding Y values for the plane
+                Y  = (-d - a * X - c * Z) / b
+            elif a != 0.0:
+                y = np.linspace(-5, 5, 10)
+                z = np.linspace(-5, 5, 10)
+                Y, Z = np.meshgrid(y, z)
+                # Calculate the corresponding Y values for the plane
+                X  = (-d - b * Y - c * Z) / a
+            # Plot the plane
+            ax.plot_surface(X, Y, Z, alpha=alpha)
+            #ax.plot(pos[:,0],pos[:,1],pos[:,2],color=color)
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')

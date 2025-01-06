@@ -88,8 +88,12 @@ class Surface(object):
 class Plane(Surface):
 
     def __init__(self,normal,d):
+        # the normal vector normalizes the vector
+        # which we don't want for the defintion of the plane
+        # because we need to divide "d" as well
+        r = np.linalg.norm(normal)
         self.normal = NormalVector(normal)
-        self.d = d
+        self.d = d / r
         self.position = None
 
         # Equation of a plane in 3D
@@ -147,23 +151,33 @@ class Plane(Surface):
     
     def distance(self,obj):
         """ Distance from a point and the normal of the plane. """
-        if hasattr(obj,'center'):
-            pnt = obj.center
-        elif isinstance(obj,Point):
-            pnt = obj
-        else:
-            pnt = Point(obj)
-        # d = |A*xo + B*yo + C*zo + D |/sqrt(A^2 + B^2 + C^2),
-        # where (xo, yo, zo) is the given point and Ax + By + Cz + D = 0 is the
-        x0,y0,z0 = pnt.data
-        a,b,c,d = self.data
-        numer = np.abs(a*x0+b*y0+c*z0+d)
-        denom = np.sqrt(a**2+b**2+c**2)
-        if denom != 0.0:
-            dist = numer / denom
-        else:
-            dist = np.nan
-        return dist
+        if (isinstance(obj,list)==False and isinstance(obj,tuple)==False and
+            (isinstance(obj,np.ndarray) and obj.ndim!=2)):
+            obj = [obj]
+        # Loop over objects/points
+        distances = np.zeros(len(obj),float)
+        for i in range(len(obj)):
+            o = obj[i]
+            if hasattr(o,'center'):
+                pnt = o.center
+            elif isinstance(o,Point):
+                pnt = o
+            else:
+                pnt = Point(o)
+            # d = |A*xo + B*yo + C*zo + D |/sqrt(A^2 + B^2 + C^2),
+            # where (xo, yo, zo) is the given point and Ax + By + Cz + D = 0 is the
+            x0,y0,z0 = pnt.data
+            a,b,c,d = self.data
+            numer = np.abs(a*x0+b*y0+c*z0+d)
+            denom = np.sqrt(a**2+b**2+c**2)
+            if denom != 0.0:
+                dist = numer / denom
+            else:
+                dist = np.nan
+            distances[i] = dist
+        if len(obj)==1:
+            distances = distances[0]
+        return distances
 
     def isparallel(self,line):
         """ Check if a line or ray is parallel to the plane """

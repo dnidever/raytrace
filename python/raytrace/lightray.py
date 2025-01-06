@@ -132,9 +132,13 @@ class LightRay(object):
         zr = [np.min(coords[:,2]),np.max(coords[:,2])]
         dz = np.maximum(np.ptp(zr)*0.1,1)
         zr = [zr[0]-dz,zr[1]+dz]
-        ax.set_xlim(xr)
-        ax.set_ylim(yr)
-        ax.set_zlim(zr)
+        xr0,yr0,zr0 = ax.get_xlim(),ax.get_ylim(),ax.get_zlim()
+        fxr = [min(xr[0],xr0[0]),max(xr[1],xr0[1])]
+        fyr = [min(yr[0],yr0[0]),max(yr[1],yr0[1])]
+        fzr = [min(zr[0],zr0[0]),max(zr[1],zr0[1])]
+        ax.set_xlim(fxr)
+        ax.set_ylim(fyr)
+        ax.set_zlim(fzr)
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')

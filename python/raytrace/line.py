@@ -940,6 +940,6 @@ class Ray(object):
     def __ne__(self, b):
         return ~self.__eq__(b)
     
-        
+# square  
 # circle
 # ellipse
