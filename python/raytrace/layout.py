@@ -100,4 +100,37 @@ class Layout(object):
         for e in self:
             s += str(e)+'\n'
         return s
-    
+        
+    def plot(self,ax=None,color=None,alpha=0.6):
+        """ Make a 3-D plot of all of the elements """
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+        if ax is None:
+            ax = plt.figure().add_subplot(projection='3d')
+        # elements loop
+        extents = []
+        for i,elem in enumerate(self):
+            elem.plot(ax=ax,color=color,alpha=alpha)
+            #extents.append(elem.extent)
+
+        # xr = [np.min(coords[:,0]),np.max(coords[:,0])]
+        # dx = np.maximum(np.ptp(xr)*0.1,1)
+        # xr = [xr[0]-dx,xr[1]+dx]
+        # yr = [np.min(coords[:,1]),np.max(coords[:,1])]
+        # dy = np.maximum(np.ptp(yr)*0.1,1)
+        # yr = [yr[0]-dy,yr[1]+dy]
+        # zr = [np.min(coords[:,2]),np.max(coords[:,2])]
+        # dz = np.maximum(np.ptp(zr)*0.1,1)
+        # zr = [zr[0]-dz,zr[1]+dz]
+        xr0,yr0,zr0 = ax.get_xlim(),ax.get_ylim(),ax.get_zlim()
+        # fxr = [min(xr[0],xr0[0]),max(xr[1],xr0[1])]
+        # fyr = [min(yr[0],yr0[0]),max(yr[1],yr0[1])]
+        # fzr = [min(zr[0],zr0[0]),max(zr[1],zr0[1])]
+        # ax.set_xlim(fxr)
+        # ax.set_ylim(fyr)
+        # ax.set_zlim(fzr)
+            
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        return ax
