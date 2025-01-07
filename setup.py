@@ -8,8 +8,8 @@ from setuptools.command.install import install
 #  load to PYPI
 pypiname = 'astroraytrace'
 
-setup(name='astroraytrace',
-      version='1.0.2',
+setup(name='raytrace',
+      version='1.0.3',
       description='Astronomical optics ray tracing',
       author='David Nidever',
       author_email='dnidever@montana.edu',
