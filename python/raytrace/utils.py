@@ -613,3 +613,64 @@ def doLineSegmentsIntersect(x1, y1, x2, y2):
             return False  # There is no mutual abcisses
         else:
             return True   # There is overlap 
+
+def islinelike(obj):
+    """ Check if an object is line-like """
+    if (isinstance(b,Line) or isinstance(b,lightray.LightRay) or
+        issubclass(b.__class__,Vector) or isinstance(b,Ray)):
+        return True
+    else:
+        return False
+
+def linelikenormal(obj):
+    """ Return normal vector data of line-like object """
+    if isinstance(b,Line):
+        data = b.slopes.copy()
+    elif isinstance(b,lightray.LightRay):
+        data = b.normal.data.copy()
+    elif issubclass(b.__class__,Vector):
+        data = b.data.copy()
+    elif isinstance(b,Ray):
+        data = b.normal.data.copy()
+    else:
+        raise ValueError('Object is not line-like')
+    return data
+
+def ispointlike(points):
+    """ Check if an object is point-like or multiple points"""
+    value = False
+    if str(type(points)).find('line.Point')>-1:
+        value = True
+    elif (isinstance(points,list) or isinstance(points,tuple)):
+        # List/tuple can have Points, numpy array or 3-element lists/tuples
+        if isinstance(points[0],Point):
+            value = True
+        elif isinstance(points[0],list) or isinstance(points[0],tuple):
+            value = (len(points[0])==3)
+        elif isinstance(points[0],np.ndarray):
+            data = np.atleast_2d(points[0])
+            value = (data.shape[1]==3)
+    elif isinstance(points,np.ndarray):
+        data = np.atleast_2d(points)
+        value = (data.shape[1]==3)
+    else:
+        value = False
+    return value
+
+def pointlikedata(points):
+    """ Return 2D point-like data """
+    if str(type(points)).find('line.Point')>-1:
+        data = np.atleast_2d(points.data)
+    elif (isinstance(points,list) or isinstance(points,tuple)):
+        # List/tuple can have Points, numpy array or 3-element lists/tuples
+        if isinstance(points[0],Point):
+            data = np.atleast_2d([p.data for p in points])
+        elif isinstance(points[0],list) or isinstance(points[0],tuple):
+            data = np.atleast_2d(points)
+        elif isinstance(points[0],np.ndarray):
+            data = np.atleast_2d(points[0])
+    elif isinstance(points,np.ndarray):
+        data = np.atleast_2d(points)
+    else:
+        raise ValueError('Object is not point(s)-like')
+    return data

@@ -9,30 +9,6 @@ from .line import Point,Vector,NormalVector,Line,Ray
 
 EPSILON = 1e-10
 
-def islinelike(obj):
-    """ Check if an object is line-like """
-    if (isinstance(b,Line) or isinstance(b,lightray.LightRay) or
-        issubclass(b.__class__,Vector) or isinstance(b,Ray)):
-        return True
-    else:
-        return False
-
-def linelikenormal(obj):
-    """ Return normal vector data of line-like object """
-    if isinstance(b,Line):
-        data = b.slopes.copy()
-    elif isinstance(b,lightray.LightRay):
-        data = b.normal.data.copy()
-    elif issubclass(b.__class__,Vector):
-        data = b.data.copy()
-    elif isinstance(b,Ray):
-        data = b.normal.data.copy()
-    else:
-        raise ValueError('Object is not line-like')
-    return data
-
-# cylinder
-# box
 
 class Surface(object):
     """ Main surface base class. """
@@ -183,9 +159,9 @@ class Plane(Surface):
         """ Check if a line or ray is parallel to the plane """
         # check if the line direction is orthogonal to the plane's normal vector
         # calculate dot product, zero if they orthogonal
-        if islinelike(line)==False:
-            raise ValueError('b must be a Line-line object')
-        data = linelikenormal(line)
+        if utils.islinelike(line)==False:
+            raise ValueError('b must be a Line-like object')
+        data = utils.linelikenormal(line)
         # check if line is perpendicular to plane normal vector
         return self.normal.isperpendicular(data)
 
@@ -197,25 +173,30 @@ class Plane(Surface):
         """ Check if a line of ray is perpendicular to the plane """
         # check if the line normal is orthogonal to the plane's normal vector
         # calculate dot product, zero if they orthogonal
-        if islinelike(line)==False:
-            raise ValueError('b must be a Line-line object')
-        data = linelikenormal(line)
+        if utils.islinelike(line)==False:
+            raise ValueError('b must be a Line-like object')
+        data = utils.linelikenormal(line)
         # check if line is parallel to plane normal vector
         return self.normal.isparallel(data)
         
-    def ison(self,point):
-        """ Check if a point lies on the plane """
-        if isinstance(point,Point):
-            data = point.data
-        else:
-            data = point
-        # Plug the point coordinate into the parameteric equations
-        # and see if it is true.
-        # a*x + b*y + c*z + d = 0
-        if np.abs(np.sum(self.normal.data*data)+self.d) < EPSILON:
-            return True
-        else:
-            return False
+    def ison(self,points):
+        """ Check if points lie on the plane """
+        if utils.ispointlike(points)==False:
+            raise ValueError('points must be point-like')
+        data = utils.pointlikedata(points)
+        npts = data.shape[0]
+        isonplane = npts*[None]
+        for i in range(npts):
+            # Plug the point coordinate into the parameteric equations
+            # and see if it is true.
+            # a*x + b*y + c*z + d = 0
+            if np.abs(np.sum(self.normal.data*data[i,:])+self.d) < EPSILON:
+                isonplane[i] = True
+            else:
+                isonplane[i] = False
+        if npts==1:
+            isonplane = isonplane[0]
+        return isonplane
     
     def intersections(self,line):
         """ Return the intersection points """
@@ -288,6 +269,26 @@ class Sphere(Surface):
         return np.linalg.norm(self.center-pnt)
 
         return self.normal
+
+    def ison(self,points):
+        """ Check if points lie on the plane """
+        if np.all(utils.ispointlike(points))==False:
+            raise ValueError('points must be point-like')
+        data = utils.pointlikedata(points)
+        npts = data.shape[0]
+        isonsphere = npts*[None]
+        for i in range(npts):
+            # Check if the point is on the sphere
+            pnt = Point(data[i,:]).toframe(self)
+            x0,y0,z0 = pnt.data
+            z = self.a*(x0**2+y0**2)
+            if np.abs(pnt.r-self.radius) < EPSILON:
+                isonsphere[i] = True
+            else:
+                isonsphere[i] = False
+        if npts==1:
+            isonsphere = isonsphere[0]
+        return isonsphere
     
     def intersections(self,line):
         """ Return the intersection points """
@@ -387,7 +388,27 @@ class HalfSphere(Surface):
         p = Plane(self.normal.data,d)
         p.radius = self.radius
         return p
-        
+
+    def ison(self,points):
+        """ Check if points lie on the plane """
+        if np.all(utils.ispointlike(points))==False:
+            raise ValueError('points must be point-like')
+        data = utils.pointlikedata(points)
+        npts = data.shape[0]
+        isonhsphere = npts*[None]
+        for i in range(npts):
+            # Check if the point is on the half sphere
+            pnt = Point(data[i,:]).toframe(self)
+            x0,y0,z0 = pnt.data
+            z = self.a*(x0**2+y0**2)
+            if np.abs(pnt.r-self.radius) < EPSILON and z0 >= 0.0:
+                isonhsphere[i] = True
+            else:
+                isonhsphere[i] = False
+        if npts==1:
+            isonhsphere = isonhsphere[0]
+        return isonhsphere
+    
     def intersections(self,line):
         """ Return the intersection points """
         if isinstance(line,ray.Ray):
@@ -470,7 +491,7 @@ class Parabola(Surface):
 
     @a.setter
     def a(self,value):
-        self.__a = a
+        self.__a = value
 
     def __repr__(self):
         dd = (*self.position.data,*self.normal.data,self.a)
@@ -497,20 +518,30 @@ class Parabola(Surface):
             pnt = Point(obj)
         return np.linalg.norm(self.center-pnt)
 
-    def normalatpoint(self,point):
+    def normalat(self,point):
         """ Return the normal at a certain point """
         raise NotImplemented
     
     def ison(self,pnt):
-        """ Check if the point is on the surface """
-        pnt2 = Point(pnt).toframe(self)
-        x0,y0,z0 = pnt2.data
-        z = self.a*(x0**2+y0**2)
-        if np.abs(z-z0) < EPSILON:
-            return True
-        else:
-            return False
-        
+        """ Check if points lie on the plane """
+        if np.all(utils.ispointlike(points))==False:
+            raise ValueError('points must be point-like')
+        data = utils.pointlikedata(points)
+        npts = data.shape[0]
+        isonparabola = npts*[None]
+        for i in range(npts):
+            # Check if the point is on the parabola
+            pnt = Point(data[i,:]).toframe(self)
+            x0,y0,z0 = pnt.data
+            z = self.a*(x0**2+y0**2)
+            if np.abs(z-z0) < EPSILON:
+                isonparabola[i] = True
+            else:
+                isonparabola[i] = False
+        if npts==1:
+            isonparabola = isonparabola[0]
+        return isonparabola
+
     def intersections(self,line):
         """ Return the intersection points """
         # rotate the line into the Parabola reference frame
@@ -596,4 +627,152 @@ class Parabola(Surface):
     def __ne__(self, b):
         return ((self.__class__!=b.__class__) or (self.a!=b.a) or
                 (self.position!=b.position) or (self.normal!=b.normal))
+
     
+####--------------------------------
+#  Bounded Surfaces
+
+# class BoundedSurface(Surface):
+#     """ These are 2D surface that have edges """
+
+#     def __init__(self,boundary,*args,**kw):
+#         super().__init__(*args,**kw)
+#         self.boundary = boundary
+
+
+class RectangleSurface(Surface):
+
+    def __init__(self,boundary,**kw):
+        super().__init__(**kw)
+        self.boundary = boundary
+        d = -np.sum(self.boundary[0,:]*self.normal.data)
+        self.plane = Plane(self.normal.data,d)
+
+    @property
+    def flat(self):
+        return True
+
+    @property
+    def boundary(self):
+        return self.__boundary
+
+    @boundary.setter
+    def boundary(self,value):
+        vertices = np.atleast_2d(value)
+        if vertices.shape[0] != 4 or vertices.shape[1] != 3:
+            raise ValueError('boundary must have 4 points with x/y/z coordinates')
+        # check that we have four right angles, dot products should be zero
+        v1 = NormalVector(vertices[1,:]-vertices[0,:])
+        v2 = NormalVector(vertices[2,:]-vertices[1,:])
+        v3 = NormalVector(vertices[3,:]-vertices[2,:])
+        v4 = NormalVector(vertices[0,:]-vertices[3,:])
+        d12 = v1.dot(v2)
+        d23 = v2.dot(v3)
+        d34 = v3.dot(v4)
+        d41 = v4.dot(v1)
+        if np.sum(np.abs([d12,d23,d34,d41])) > 4*EPSILON:
+            raise ValueError('A rectangle needs four right angles')
+        # check that they all fall on a plane
+        #  calculate the normal vector
+        norm = v1.cross(v2)
+        d = -np.sum(vertices[0,:]*norm.data)
+        plane = Plane(norm.data,d)
+        onplane = plane.ison(vertices)
+        if np.all(onplane)==False:
+            raise ValueError('Rectangle vertices must lie in a plane')
+        self.__boundary = vertices
+
+    @classmethod
+    def fromvertices(cls,value):
+        """ Create the object from the vertices themselves """
+        # determine the center and normal directly
+        vertices = np.atleast_2d(value)
+        if vertices.shape[0] != 4 or vertices.shape[1] != 3:
+            raise ValueError('boundary must have 4 points with x/y/z coordinates')
+        v1 = NormalVector(vertices[1,:]-vertices[0,:])
+        v2 = NormalVector(vertices[2,:]-vertices[1,:])
+        norm = v1.cross(v2)
+        pos = np.mean(vertices,axis=0)
+        return cls(vertices,position=pos,normal=norm)
+
+    def __repr__(self):
+        dd = (*self.position.data,*self.normal.data)
+        s = 'RectangleSurface(o=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f}])'.format(*dd)
+        return s
+
+    def ison(self,points):
+        """ Check if points lie on the plane """
+        if np.all(utils.ispointlike(points))==False:
+            raise ValueError('points must be point-like')
+        data = utils.pointlikedata(points)
+        npts = data.shape[0]
+        vert = np.atleast_2d([Point(p).toframe(self).data for p in self.boundary])
+        isonrec = npts*[None]
+        for i in range(npts):
+            # Check if the point is on the rectangle
+            pnt = Point(data[i,:]).toframe(self)
+            onplane = self.plane.ison(pnt)
+            if self.plane.ison(pnt) and utils.isPointInPolygon(vert[:,0],vert[:,1],pnt.x,pnt.y):
+                isonrec[i] = True
+            else:
+                isonrec[i] = False
+        if npts==1:
+            isonrec = isonrec[0]
+        return isonrec
+        
+    def intersections(self,line):
+        """ Return the intersection points """
+        # rotate the line into the Parabola reference frame
+        # line in parametric form
+        # substitute x/y/z in parabola equation for the line parametric equations
+        # solve quadratic equation in t
+        #rline = line.rotate(self.normal)
+        #intpts = utils.intersect_line_parabola(line,self)
+        #return intpts
+        if isinstance(line,ray.Ray):
+            l = Line(ray.position.data,ray.normal.data)
+        elif isinstance(line,Line):
+            l = line
+        else:
+            raise ValueError('input must be Line or Ray')
+        out = utils.intersect_line_parabola(l,self)
+        import pdb; pdb.set_trace()
+        if len(out)>1 and hasattr(l,'position'):
+            dist = [l.position.distance(o) for o in out]
+            if dist[0] > dist[1]:  # flip the order
+                out = [out[1],out[0]]
+        return out
+    
+
+    def plot(self,ax=None,color=None,alpha=0.6,cmap='viridis'):
+        """ Make a 3-D plot """
+        import matplotlib.pyplot as plt
+        if ax is None:
+            ax = plt.figure().add_subplot(projection='3d')
+        import pdb; pdb.set_trace()
+        # Generate sphere coordinates
+        u = np.linspace(0, 2 * np.pi, 100)
+        v = np.linspace(0, np.pi/2, 100)
+        x = np.outer(np.cos(u), np.sin(v))*self.radius
+        y = np.outer(np.sin(u), np.sin(v))*self.radius
+        z = np.outer(np.ones(np.size(u)), np.cos(v))*self.radius
+        # Rotate
+        pos = np.zeros((3,100*100),float)
+        pos[0,:] = x.ravel()
+        pos[1,:] = y.ravel()
+        pos[2,:] = z.ravel()
+        pos = np.matmul(self.normal.rotation_matrix,pos)
+        # translate
+        x = pos[0,:] + self.position.x
+        x = x.reshape(100,100)
+        y = pos[1,:] + self.position.y
+        y = y.reshape(100,100)
+        z = pos[2,:] + self.position.z
+        z = z.reshape(100,100)        
+        # Plot the sphere
+        ax.plot_surface(x, y, z, rstride=4, cstride=4, color=color, alpha=alpha,
+                        cmap=cmap, edgecolors='k', lw=0.6)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        return ax

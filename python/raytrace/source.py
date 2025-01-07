@@ -134,7 +134,6 @@ class FiberSource(object):
             rr = rr[0]
         return rr
 
-    
 class LaserSource(object):
 
     # laser light source
@@ -169,11 +168,116 @@ class LaserSource(object):
     def rays(self,n=1,wave=5000e-10):
         """ Make a number of random rays with input wavelengths that come out at the right angle """
         nwave = np.atleast_1d(wave).size
+        if nwave > 1:
+            raise ValueError('Wave must be a scalar')
+        wave = wave[0]
+        rr = []
+        for i in range(n):
+            r = ray.Ray(wave[i],self.center,self.normal.data.copy())
+            rr.append(r)
+        if len(rr)==1:
+            rr = rr[0]
+        return rr
+
+
+class BeamSource(object):
+
+    # Light coming out in a parallel beam
+    
+    def __init__(self,position=None,normal=None,radius=1.0):
+        if position is None:
+            position = [0.0,0.0,0.0]
+        if normal is None:
+            normal = [0,0,1]
+        self.position = surface.Point(position)
+        self.normal = surface.NormalVector(position)
+        self.radius = radius
+        self.kind = 'beam'
+
+    @property
+    def kind(self):
+        return self.__kind
+
+    @kind.setter
+    def kind(self,value):
+        self.__kind = str(value)
+        
+    @property
+    def center(self):
+        return self.position.data
+
+    def __repr__(self):
+        dd = (self.fratio,*self.center,*self.normal.data,self.radius)
+        s = 'BeamSource(o=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f},radius={:.3f}])'.format(*dd)
+        return s
+    
+    def rays(self,n=1,wave=5000e-10):
+        """ Make a number of random rays with input wavelengths that come out at the right angle """
+        nwave = np.atleast_1d(wave).size
+        if nwave==1:
+            wave = np.zeros(n,float)+np.atleast_1d(wave)[0]
+        r = self.radius * np.sqrt(np.random.rand(n))
+        theta = np.random.rand() * 2 * np.pi
+        x = r * np.cos(theta)
+        y = r * np.sin(theta)
+        z = np.zeros(n,float)
+        coo = np.zeros((n,3),float)
+        coo[:,0] = x
+        coo[:,1] = y
+        coo[:,2] = z
+        # Rotate and translate
+        coo2 = np.matmul(self.normal.rotation_matrix)
+        coo2 += self.center
+        
+        rr = []
+        for i in range(n):
+
+            r = ray.Ray(wave[i],self.center,self.normal.data.copy())
+            rr.append(r)
+        if len(rr)==1:
+            rr = rr[0]
+        return rr
+
+class ConeSource(object):
+
+    # laser light source
+    # no f-ratio, emits rays with a single orientation
+    
+    def __init__(self,position=None,normal=None,angle=10.0):
+        if position is None:
+            position = [0.0,0.0,0.0]
+        if normal is None:
+            normal = [0,0,1]
+        self.position = surface.Point(position)
+        self.normal = surface.NormalVector(position)
+        self.angle = angle
+        self.kind = 'cone'
+
+    @property
+    def kind(self):
+        return self.__kind
+
+    @kind.setter
+    def kind(self,value):
+        self.__kind = str(value)
+        
+    @property
+    def center(self):
+        return self.position.data
+
+    def __repr__(self):
+        dd = (self.fratio,*self.center,*self.normal.data,self.angle)
+        s = 'ConeSource(o=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f}],angle={:.3f} deg)'.format(*dd)
+        return s
+    
+    def rays(self,n=1,wave=5000e-10):
+        """ Make a number of random rays with input wavelengths that come out at the right angle """
+        nwave = np.atleast_1d(wave).size
         if nwave==1:
             wave = np.zeros(n,float)+np.atleast_1d(wave)[0]
         rr = []
         for i in range(n):
-            r = ray.Ray(wave[i],self.center,self.normal.data.copy()
+            r = ray.Ray(wave[i],self.center,self.normal.data.copy())
             rr.append(r)
         if len(rr)==1:
             rr = rr[0]
