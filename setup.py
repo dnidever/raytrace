@@ -4,8 +4,12 @@ import shutil
 from setuptools import setup, find_packages, find_namespace_packages
 from setuptools.command.install import install
 
-setup(name='raytrace',
-      version='1.0.0',
+# Change name to "astroraytrace" when you want to
+#  load to PYPI
+pypiname = 'astroraytrace'
+
+setup(name='astroraytrace',
+      version='1.0.1',
       description='Astronomical optics ray tracing',
       author='David Nidever',
       author_email='dnidever@montana.edu',
