@@ -456,6 +456,21 @@ def normal_to_rot_matrix(normal_vector, angle):
 
 #print(rotation_matrix) 
 
+def stype(obj):
+    """ Return the object type in a string """
+    # "<class 'raytrace.lightray.LightRay'>"
+    value = str(type(obj))
+    value = value[8:-2]
+    return value
+
+def sisinstance(obj,styp):
+    """ Check if the object is the right type using a string of the class name """
+    # need to give the full name, e.g. "raytrace.lightray.LightRay"
+    objstype = stype(obj)
+    if objstype == styp:
+        return True
+    else:
+        return False
 
 def euler_rot_matrix(alpha,beta,gamma,degrees=False):
     # Input the euler angles
@@ -614,23 +629,24 @@ def doLineSegmentsIntersect(x1, y1, x2, y2):
         else:
             return True   # There is overlap 
 
-def islinelike(obj):
+def islinelike(b):
     """ Check if an object is line-like """
-    if (isinstance(b,Line) or isinstance(b,lightray.LightRay) or
-        issubclass(b.__class__,Vector) or isinstance(b,Ray)):
+    if (sisinstance(b,'raytrace.line.Line') or sisinstance(b,'raytrace.lightray.LightRay') or
+        sisinstance(b,'raytrace.line.Vector') or sisinstance(b,'raytrace.line.NormalVector') or
+        sisinstance(b,'raytrace.line.Ray')):
         return True
     else:
         return False
 
-def linelikenormal(obj):
+def linelikenormal(b):
     """ Return normal vector data of line-like object """
-    if isinstance(b,Line):
+    if sisinstance(b,'raytrace.line.Line'):
         data = b.slopes.copy()
-    elif isinstance(b,lightray.LightRay):
+    elif sisinstance(b,'raytrace.lightray.LightRay'):
         data = b.normal.data.copy()
-    elif issubclass(b.__class__,Vector):
+    elif sisinstance(b,'raytrace.line.Vector') or sisinstance(b,'raytrace.line.NormalVector'):
         data = b.data.copy()
-    elif isinstance(b,Ray):
+    elif sisinstance(b,'raytrace.line.Ray'):
         data = b.normal.data.copy()
     else:
         raise ValueError('Object is not line-like')
@@ -639,11 +655,11 @@ def linelikenormal(obj):
 def ispointlike(points):
     """ Check if an object is point-like or multiple points"""
     value = False
-    if str(type(points)).find('line.Point')>-1:
+    if sisinstance(points,'raytrace.line.Point'):
         value = True
-    elif (isinstance(points,list) or isinstance(points,tuple)):
+    elif (sisinstance(points,list) or sisinstance(points,tuple)):
         # List/tuple can have Points, numpy array or 3-element lists/tuples
-        if isinstance(points[0],Point):
+        if sisinstance(points[0],'raytrace.line.Point'):
             value = True
         elif isinstance(points[0],list) or isinstance(points[0],tuple):
             value = (len(points[0])==3)
@@ -659,11 +675,11 @@ def ispointlike(points):
 
 def pointlikedata(points):
     """ Return 2D point-like data """
-    if str(type(points)).find('line.Point')>-1:
+    if sisinstance(points,'raytrace.line.Point')>-1:
         data = np.atleast_2d(points.data)
-    elif (isinstance(points,list) or isinstance(points,tuple)):
+    elif (sisinstance(points,list) or sisinstance(points,tuple)):
         # List/tuple can have Points, numpy array or 3-element lists/tuples
-        if isinstance(points[0],Point):
+        if sisinstance(points[0],'raytrace.line.Point'):
             data = np.atleast_2d([p.data for p in points])
         elif isinstance(points[0],list) or isinstance(points[0],tuple):
             data = np.atleast_2d(points)

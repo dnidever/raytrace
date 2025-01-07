@@ -4,7 +4,7 @@ from . import surface
 
 """ Light sources """
 
-class Source(Optics):
+class Source(object):
 
     # Light source
     
@@ -34,7 +34,7 @@ class Source(Optics):
         pass
 
 
-class IsotropicSource(Optics):
+class IsotropicSource(Source):
 
     # Light source
     
@@ -79,7 +79,7 @@ class IsotropicSource(Optics):
         return rr
 
     
-class FiberSource(object):
+class FiberSource(Source):
 
     # fiber light source
     # has some f-ratio
@@ -134,7 +134,7 @@ class FiberSource(object):
             rr = rr[0]
         return rr
 
-class LaserSource(object):
+class LaserSource(Source):
 
     # laser light source
     # no f-ratio, emits rays with a single orientation
@@ -180,7 +180,7 @@ class LaserSource(object):
         return rr
 
 
-class BeamSource(object):
+class BeamSource(Source):
 
     # Light coming out in a parallel beam
     
@@ -238,7 +238,7 @@ class BeamSource(object):
             rr = rr[0]
         return rr
 
-class ConeSource(object):
+class ConeSource(Source):
 
     # laser light source
     # no f-ratio, emits rays with a single orientation

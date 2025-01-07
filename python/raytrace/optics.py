@@ -6,7 +6,7 @@ from . import surface,utils
 from .lightray import LightRay
 from .line import Point,Vector,NormalVector,Line,Ray
 
-valid_optics = [FlatMirror]
+#valid_optics = [FlatMirror]
 
 class Optics(object):
     """ Main class for optical elements """
@@ -116,6 +116,9 @@ class FlatMirror(Optics):
             #print('not a lightray')
             return reflected_ray
 
+        # NEEDS to be able to handle rays hitting the "back" surface
+        # they should just be absorbed.
+        
     def distance(self,points):
         """ Return distance to plane """
         return self.plane.distance(points)

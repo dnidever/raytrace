@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import copy
 from . import surface,line
 
 # class for light rays
@@ -7,7 +8,7 @@ from . import surface,line
 cspeed = 2.99792458e8  # speed of light in m/s
 hplanck = 6.626e-34    # planck's constant, in J*s
 
-lightray_states = set(['inflight','detected'])
+lightray_states = set(['inflight','absorbed','detected'])
 
 class LightRay(object):
 
@@ -104,7 +105,10 @@ class LightRay(object):
     def distance(self,point):
         """ Return distance from the ray to a point """
         return self.position.distance(point)
-        
+
+    def copy(self):
+        return copy.deepcopy(self)
+    
     def plot(self,ax=None,color=None,alpha=0.8):
         """ Make a 3-D plot of the ray """
         import matplotlib.pyplot as plt

@@ -292,8 +292,8 @@ class Sphere(Surface):
     
     def intersections(self,line):
         """ Return the intersection points """
-        if isinstance(line,ray.Ray):
-            l = Line(ray.position.data,ray.normal.data)
+        if isinstance(line,lightray.LightRay):
+            l = Line(line.position.data,line.normal.data)
         elif isinstance(line,Line):
             l = line
         else:
@@ -411,8 +411,8 @@ class HalfSphere(Surface):
     
     def intersections(self,line):
         """ Return the intersection points """
-        if isinstance(line,ray.Ray):
-            l = Line(ray.position.data,ray.normal.data)
+        if isinstance(line,lightray.LightRay):
+            l = Line(line.position.data,line.normal.data)
         elif isinstance(line,Line):
             l = line
         else:
@@ -551,8 +551,8 @@ class Parabola(Surface):
         #rline = line.rotate(self.normal)
         #intpts = utils.intersect_line_parabola(line,self)
         #return intpts
-        if isinstance(line,ray.Ray):
-            l = Line(ray.position.data,ray.normal.data)
+        if isinstance(line,lightray.LightRay):
+            l = Line(line.position.data,line.normal.data)
         elif isinstance(line,Line):
             l = line
         else:
@@ -640,7 +640,7 @@ class Parabola(Surface):
 #         self.boundary = boundary
 
 
-class RectangleSurface(Surface):
+class Rectangle(Surface):
 
     def __init__(self,boundary,**kw):
         super().__init__(**kw)
@@ -697,7 +697,7 @@ class RectangleSurface(Surface):
 
     def __repr__(self):
         dd = (*self.position.data,*self.normal.data)
-        s = 'RectangleSurface(o=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f}])'.format(*dd)
+        s = 'Rectangle(o=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f}])'.format(*dd)
         return s
 
     def ison(self,points):
@@ -729,20 +729,23 @@ class RectangleSurface(Surface):
         #rline = line.rotate(self.normal)
         #intpts = utils.intersect_line_parabola(line,self)
         #return intpts
-        if isinstance(line,ray.Ray):
-            l = Line(ray.position.data,ray.normal.data)
-        elif isinstance(line,Line):
+        if utils.sisinstance(line,'raytrace.lightray.LightRay'):
+            l = Line(line.position.data,line.normal.data)
+        elif utils.sisinstance(line,'raytrace.line.Line'):
             l = line
         else:
             raise ValueError('input must be Line or Ray')
-        out = utils.intersect_line_parabola(l,self)
-        import pdb; pdb.set_trace()
-        if len(out)>1 and hasattr(l,'position'):
-            dist = [l.position.distance(o) for o in out]
-            if dist[0] > dist[1]:  # flip the order
-                out = [out[1],out[0]]
-        return out
-    
+        out = utils.intersect_line_plane(l,self.plane)
+        # Rotate to the rectangle frame and make sure it is within the vertices
+        if len(out)>0:
+            rout = Point(out).toframe(self).data
+            vert = np.atleast_2d([Point(v).toframe(self) for v in self.boundary])
+            if utils.isPointInPolygon(vert[:,0],vert[:,1],rout[0],rout[1]):
+                return out
+            else:
+                return []
+        else:
+            return []
 
     def plot(self,ax=None,color=None,alpha=0.6,cmap='viridis'):
         """ Make a 3-D plot """
