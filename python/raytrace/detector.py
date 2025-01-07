@@ -2,30 +2,49 @@
 
 import os
 import numpy as np
-from . import surface,utils
+from . import utils,surface,solidobject,lightray
 from .line import Point,Vector,NormalVector,Line,Ray
 
 class Detector(Optics):
 
-    # This is a nondescript detector that records where each ray hits
+    # This is a nondescript "ideal" detector that records where each ray hits
     # and the energy (and normal?)
     
     def __init__(self,position,normal,vertices):
         self.position = Point(position)
         self.normal = NormalVector(normal)
-        # construct plane object
-        self.plane = surface.Plane.fromnormalcenter(normal,position)
         self.vertices = vertices
+        # construct plane object
+        self.rectangle = surface.Rectangle.fromvertices(vertices)
         self.data = []
+        
+    @property
+    def detections(self):
+        return self.__data
 
-    def __call__(self,ray):
+    @detections.setter
+    def detections(self,value):
+        self.__data.append(value)
+
+    def __len__(self):
+        return len(self.detections)
+        
+    def __call__(self,rays):
         """ Process a ray """
-        pass
+        if isinstance(lightray.LightRay):
+            rays = [rays]
+        for i in range(len(rays)):
+            ray = rays[i]
+            # check if it intersects
+            tpnt = self.intersections(ray)
+            if len(tpnt)>0:
+                pnt = Point(tpnt).toframe(self)
+                # (ray, point of detection in 3D space, point of detection in detector frame)
+                self.detections = (ray.copy(),tpnt.data,pnt.data
 
     def intersections(self,ray):
         """ Get the intersections of a ray with the detector """
-        tpnt = self.plane.intersections(ray)
-        # now make sure it's within the vertices
+        tpnt = self.rectangle.intersections(ray)
     
     def display(self,bins=1000):
         """ Display an image of the recorded rays """
