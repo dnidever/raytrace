@@ -22,6 +22,44 @@ class SolidObject(object):
         self.normal = NormalVector(normal)
 
     @property
+    def surfaces(self):
+        return self.__surfaces
+
+    @surfaces.setter
+    def surfaces(self,value):
+        self.__surfaces = value
+
+    def append(self,value):
+        self.surfaces = value
+            
+    @property
+    def nsurfaces(self):
+        return len(self.surfaces)
+
+    def __len__(self):
+        return self.nsurfaces
+
+    def __getitem__(self,index):
+        if isinstance(index,int)==False and isinstance(index,slice)==False:
+            raise ValueError('index must be an integer or slice')
+        if isinstance(index,int) and index>len(self)-1:
+            raise IndexError('index '+str(index)+' is out of bounds for axis 0 with size '+str(len(self)))
+        if isinstance(index,int):
+            return self.surfaces[index]
+        # slice the list and return
+
+    def __iter__(self):
+        self._count = 0
+        return self
+        
+    def __next__(self):
+        if self._count < len(self):
+            self._count += 1            
+            return self[self._count-1]
+        else:
+            raise StopIteration
+        
+    @property
     def center(self):
         return self.position.data
     
@@ -60,6 +98,9 @@ class Box(SolidObject):
     def __init__(self,vertices,**kw):
         self.vertices = vertices
 
+        # need a list of surfaces that we can loop over
+        # Rectangle's
+        
     @property
     def vertices(self):
         return self.__vertices
