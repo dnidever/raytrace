@@ -9,7 +9,7 @@ from setuptools.command.install import install
 pypiname = 'astroraytrace'
 
 setup(name='raytrace',
-      version='1.0.5',
+      version='1.0.6',
       description='Astronomical optics ray tracing',
       author='David Nidever',
       author_email='dnidever@montana.edu',
