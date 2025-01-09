@@ -84,7 +84,7 @@ class Layout(object):
             ray = nextelem(ray)
             # Find new set of intersections
             intersects = self.intersections(ray)
-            print(ray.number,len(intersects),intersects)
+            #print(ray.number,len(intersects),intersects)
             count += 1
         return ray
 
