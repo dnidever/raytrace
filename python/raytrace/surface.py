@@ -160,8 +160,8 @@ class Plane(Surface):
         # check if the line direction is orthogonal to the plane's normal vector
         # calculate dot product, zero if they orthogonal
         if utils.islinelike(line)==False:
-            raise ValueError('b must be a Line-like object')
-        data = utils.linelikenormal(line)
+            raise ValueError('line must be a Line-like object')
+        data = utils.linelikedata(line)
         # check if line is perpendicular to plane normal vector
         return self.normal.isperpendicular(data)
 
@@ -174,8 +174,8 @@ class Plane(Surface):
         # check if the line normal is orthogonal to the plane's normal vector
         # calculate dot product, zero if they orthogonal
         if utils.islinelike(line)==False:
-            raise ValueError('b must be a Line-like object')
-        data = utils.linelikenormal(line)
+            raise ValueError('line must be a Line-like object')
+        data = utils.linelikedata(line)
         # check if line is parallel to plane normal vector
         return self.normal.isparallel(data)
         
@@ -752,29 +752,12 @@ class Rectangle(Surface):
         import matplotlib.pyplot as plt
         if ax is None:
             ax = plt.figure().add_subplot(projection='3d')
-        import pdb; pdb.set_trace()
-        # Generate sphere coordinates
-        u = np.linspace(0, 2 * np.pi, 100)
-        v = np.linspace(0, np.pi/2, 100)
-        x = np.outer(np.cos(u), np.sin(v))*self.radius
-        y = np.outer(np.sin(u), np.sin(v))*self.radius
-        z = np.outer(np.ones(np.size(u)), np.cos(v))*self.radius
-        # Rotate
-        pos = np.zeros((3,100*100),float)
-        pos[0,:] = x.ravel()
-        pos[1,:] = y.ravel()
-        pos[2,:] = z.ravel()
-        pos = np.matmul(self.normal.rotation_matrix,pos)
-        # translate
-        x = pos[0,:] + self.position.x
-        x = x.reshape(100,100)
-        y = pos[1,:] + self.position.y
-        y = y.reshape(100,100)
-        z = pos[2,:] + self.position.z
-        z = z.reshape(100,100)        
-        # Plot the sphere
-        ax.plot_surface(x, y, z, rstride=4, cstride=4, color=color, alpha=alpha,
-                        cmap=cmap, edgecolors='k', lw=0.6)
+        x = self.boundary[:,0]
+        y = self.boundary[:,1]
+        z = self.boundary[:,2]
+        verts = [list(zip(x,y,z))]
+        ax.add_collection3d(Poly3DCollection(verts,lw=1,alpha=alpha))
+        ax.scatter(x,y,z,color=color)
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')

@@ -21,6 +21,10 @@ class Detector(object):
         # construct plane object
         self.rectangle = surface.Rectangle.fromvertices(vertices)
         self.__data = []
+
+    @property
+    def boundary(self):
+        return self.rectangle.boundary
         
     @property
     def detections(self):
@@ -59,6 +63,9 @@ class Detector(object):
                 # Change the status of the ray
                 ray.ray = Ray(position=tpnt,normal=ray.normal)
                 ray.state = 'detected'
+        if len(rays)==1:
+            rays = rays[0]
+        return rays
 
     def __repr__(self):
         dd = (len(self),*self.position.data,*self.normal.data)
@@ -67,6 +74,9 @@ class Detector(object):
                 
     def intersections(self,ray):
         """ Get the intersections of a ray with the detector """
+        if ray is None:
+            print('detector.intersections() ray is None')
+            import pdb; pdb.set_trace()
         tpnt = self.rectangle.intersections(ray)
         return tpnt
     
@@ -77,18 +87,17 @@ class Detector(object):
     def plot(self,ax=None,color=None,alpha=0.6):
         """ Make a 3-D plot """
         import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d.art3d import Poly3DCollection
         if ax is None:
             ax = plt.figure().add_subplot(projection='3d')
-        # Create a grid of points
-        x = np.linspace(-5, 5, 10)
-        y = np.linspace(-5, 5, 10)
-        X, Y = np.meshgrid(x, y)
-        a,b,c,d = self.data
-        # Calculate the corresponding Z values for the plane
-        Z = (-d - a * X - b * Y) / c
-        # Plot the plane
-        ax.plot_surface(X, Y, Z, alpha=alpha)
-        #ax.plot(pos[:,0],pos[:,1],pos[:,2],color=color)
+        x = self.boundary[:,0]
+        y = self.boundary[:,1]
+        z = self.boundary[:,2]
+        verts = [list(zip(x,y,z))]
+        if color is None:
+            color = 'orange'
+        ax.add_collection3d(Poly3DCollection(verts,lw=1,alpha=alpha,color=color))
+        ax.scatter(x,y,z,color=color)
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')

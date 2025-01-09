@@ -629,28 +629,54 @@ def doLineSegmentsIntersect(x1, y1, x2, y2):
         else:
             return True   # There is overlap 
 
-def islinelike(b):
+def islineliketype(line):
     """ Check if an object is line-like """
-    if (sisinstance(b,'raytrace.line.Line') or sisinstance(b,'raytrace.lightray.LightRay') or
-        sisinstance(b,'raytrace.line.Vector') or sisinstance(b,'raytrace.line.NormalVector') or
-        sisinstance(b,'raytrace.line.Ray')):
+    if (sisinstance(line,'raytrace.line.Line') or sisinstance(line,'raytrace.lightray.LightRay') or
+        sisinstance(line,'raytrace.line.Vector') or sisinstance(line,'raytrace.line.NormalVector') or
+        sisinstance(line,'raytrace.line.Ray')):
+        return True
+    else:
+        return False
+    
+def islinelike(line):
+    """ Check if an object is line-like or multiple lines"""
+    if islineliketype(line):
+        return True
+    elif (sisinstance(points,list) or sisinstance(points,tuple)) and islineliketype(line[0]):
         return True
     else:
         return False
 
-def linelikenormal(b):
-    """ Return normal vector data of line-like object """
-    if sisinstance(b,'raytrace.line.Line'):
-        data = b.slopes.copy()
-    elif sisinstance(b,'raytrace.lightray.LightRay'):
-        data = b.normal.data.copy()
-    elif sisinstance(b,'raytrace.line.Vector') or sisinstance(b,'raytrace.line.NormalVector'):
-        data = b.data.copy()
-    elif sisinstance(b,'raytrace.line.Ray'):
-        data = b.normal.data.copy()
-    else:
-        raise ValueError('Object is not line-like')
+def linelikedata(lines):
+    """ Return normal vector data of line-like objects """
+    if isinstance(lines,list)==False and isinstance(lines,tuple)==False:
+        lines = [lines]
+    data = len(lines)*[None]
+    for i in range(len(lines)):
+        line = lines[i]
+        if sisinstance(line,'raytrace.line.Line'):
+            data[i] = line.slopes.copy()
+        elif sisinstance(line,'raytrace.lightray.LightRay'):
+            data[i] = line.normal.data.copy()
+        elif sisinstance(line,'raytrace.line.Vector') or sisinstance(line,'raytrace.line.NormalVector'):
+            data[i] = line.data.copy()
+        elif sisinstance(line,'raytrace.line.Ray'):
+            data[i] = line.normal.data.copy()
+        else:
+            raise ValueError('Object is not line-like')
+    data = np.atleast_2d(data)
     return data
+
+def ispointliketype(point):
+    """ Check if an object is point-like """
+    if sisinstance(line,'raytrace.line.Point'):
+        return True
+    elif (isinstance(line,list) or isinstance(line,tuple)) and len(line)==3:
+        return True
+    elif isinstance(line,np.ndaray) and line.ndim==3 and line.size==3:
+        return True
+    else:
+        return False    
 
 def ispointlike(points):
     """ Check if an object is point-like or multiple points"""

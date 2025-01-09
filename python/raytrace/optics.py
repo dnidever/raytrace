@@ -100,6 +100,13 @@ class FlatMirror(Optics):
         # No intersection, return original ray
         if len(tpnt)==0:
             return ray
+        # Check that it is coming from the frontside
+        #  dot product needs to be negative
+        if self.normal.dot(ray.normal) >= 0:
+            # Change the status of the ray
+            ray.ray = Ray(position=tpnt,normal=ray.normal)
+            ray.state = 'absorbed'
+            return ray
         # Get the reflected ray
         reflected_ray = self.reflection(ray,tpnt)
         # Update the LightRay's ray

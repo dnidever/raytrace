@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from . import surface
+from . import surface,lightray
 
 """ Light sources """
 
@@ -188,12 +188,23 @@ class BeamSource(Source):
         if position is None:
             position = [0.0,0.0,0.0]
         if normal is None:
-            normal = [0,0,1]
+            normal = [0.0,0.0,1.0]
         self.position = surface.Point(position)
-        self.normal = surface.NormalVector(position)
+        self.normal = surface.NormalVector(normal)
         self.radius = radius
         self.kind = 'beam'
+        self.raycount = 0
 
+    @property
+    def raycount(self):
+        return self.__raycount
+
+    @raycount.setter
+    def raycount(self,value):
+        if hasattr(self,'__raycount')==False or self.__raycount is None:
+            self.__raycount = 0
+        self.__raycount += value
+        
     @property
     def kind(self):
         return self.__kind
@@ -206,9 +217,13 @@ class BeamSource(Source):
     def center(self):
         return self.position.data
 
+    def __call__(self,n=1,wave=5000e-10):
+        """ Create rays """
+        return self.rays(n,wave)
+    
     def __repr__(self):
-        dd = (self.fratio,*self.center,*self.normal.data,self.radius)
-        s = 'BeamSource(o=[{:.3f},{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f},radius={:.3f}])'.format(*dd)
+        dd = (*self.center,*self.normal.data,self.radius)
+        s = 'BeamSource(o=[{:.3f},{:.3f}],n=[{:.3f},{:.3f},{:.3f},radius={:.3f}])'.format(*dd)
         return s
     
     def rays(self,n=1,wave=5000e-10):
@@ -217,7 +232,7 @@ class BeamSource(Source):
         if nwave==1:
             wave = np.zeros(n,float)+np.atleast_1d(wave)[0]
         r = self.radius * np.sqrt(np.random.rand(n))
-        theta = np.random.rand() * 2 * np.pi
+        theta = np.random.rand(n) * 2 * np.pi
         x = r * np.cos(theta)
         y = r * np.sin(theta)
         z = np.zeros(n,float)
@@ -226,13 +241,13 @@ class BeamSource(Source):
         coo[:,1] = y
         coo[:,2] = z
         # Rotate and translate
-        coo2 = np.matmul(self.normal.rotation_matrix)
+        coo2 = np.matmul(coo,self.normal.rotation_matrix)
         coo2 += self.center
-        
         rr = []
         for i in range(n):
-
-            r = ray.Ray(wave[i],self.center,self.normal.data.copy())
+            r = lightray.LightRay(wave[i],coo2[i,:],self.normal.data.copy())
+            r.number = self.raycount+1
+            self.raycount += 1
             rr.append(r)
         if len(rr)==1:
             rr = rr[0]

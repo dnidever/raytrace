@@ -58,7 +58,7 @@ class Layout(object):
         #   stop when the ray does not intersect any elements anymore
         count = 0
         intersects = self.intersections(ray)
-        while len(intersects)>0:
+        while len(intersects)>0 and ray.state=='inflight':
             # Exclude the surface that we are currently on, distance=0
             if count>0:
                 intersects = [idata for idata in intersects if np.abs(idata[2])>EPSILON]
@@ -75,7 +75,7 @@ class Layout(object):
                 nextpnt = intersects[bestind][1]
                 indexes = [i[0] for i in intersects]
                 nextindex = indexes[bestind]
-                import pdb; pdb.set_trace()
+                #import pdb; pdb.set_trace()
             else:
                 break
             # Process the ray through the next optical element
@@ -96,6 +96,9 @@ class Layout(object):
         # Loop over the elements and find the intersections
         #  keep track of which element it came from
         for i,elem in enumerate(self):
+            if ray is None:
+                print('layout.intersections() ray is None')
+                import pdb; pdb.set_trace()
             intpnt = elem.intersections(ray)
             if len(intpnt)>0:
                 if isinstance(intpnt,list)==False and isinstance(intpnt,tuple)==False:

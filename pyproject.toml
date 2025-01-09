@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "raytrace"
-version = "1.0.8"
+version = "1.0.3"
 dependencies = [
   "scipy",
   "numpy",

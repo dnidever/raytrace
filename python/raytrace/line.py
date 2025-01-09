@@ -676,11 +676,11 @@ class Line(object):
         s = 'Line([(x,y,z)=({:.3f},{:.3f},{:.3f})+t({:.3f},{:.3f},{:.3f}))'.format(*self.point,*self.slopes)
         return s
 
-    def isparallel(self,b):
+    def isparallel(self,line):
         """ Figure out if a line is parallel """
-        if utils.islinelike(b)==False:
-            raise ValueError('b must be a Line-line object')
-        data = utils.linelikenormal(b)
+        if utils.islinelike(line)==False:
+            raise ValueError('line must be a Line-line object')
+        data = utils.linelikedata(line)
         # if cross-product of the two vectors is zero, then they are parallel
         cp = np.cross(self.slopes,data)
         if np.linalg.norm(cp) < EPSILON:
@@ -688,11 +688,11 @@ class Line(object):
         else:
             return False
 
-    def isperpendicular(self,b):
+    def isperpendicular(self,line):
         """ Figure out if a line is perpendicular """
-        if utils.islinelike(b)==False:
-            raise ValueError('b must be a Line-line object')
-        data = utils.linelikenormal(b)
+        if utils.islinelike(line)==False:
+            raise ValueError('line must be a Line-line object')
+        data = utils.linelikedata(line)
         # calculate dot product, zero if they orthogonal
         dotproduct = np.dot(self.slopes,data)
         if np.abs(dotproduct) < EPSILON:
@@ -836,11 +836,11 @@ class Ray(object):
         s = 'Ray([(x,y,z)=({:.3f},{:.3f},{:.3f})+t({:.3f},{:.3f},{:.3f}))'.format(*dd)
         return s
 
-    def isparallel(self,b):
+    def isparallel(self,line):
         """ Figure out if a line is parallel """
-        if utils.islinelike(b)==False:
-            raise ValueError('b must be a Line-line object')
-        data = utils.linelikenormal(b)
+        if utils.islinelike(line)==False:
+            raise ValueError('line must be a Line-line object')
+        data = utils.linelikedata(line)
         # if cross-product of the two vectors is zero, then they are parallel
         cp = np.cross(self.normal.data,data)
         if np.linalg.norm(cp) < EPSILON:
@@ -848,11 +848,11 @@ class Ray(object):
         else:
             return False
 
-    def isperpendicular(self,b):
+    def isperpendicular(self,line):
         """ Figure out if a line is perpendicular """
-        if utils.islinelike(b)==False:
-            raise ValueError('b must be a Line-line object')
-        data = utils.linelikenormal(b)
+        if utils.islinelike(line)==False:
+            raise ValueError('line must be a Line-line object')
+        data = utils.linelikedata(line)
         # calculate dot product, zero if they orthogonal
         dotproduct = np.dot(self.normal.data,data)
         if np.abs(dotproduct) < EPSILON:
