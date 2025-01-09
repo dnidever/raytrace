@@ -203,6 +203,9 @@ class FlatMirror(Optics):
         # Now make sure it's within the vertices
         if self.ison(tpnt)==False:
             return []
+        # Make sure that the intersection point is along the direction of the ray
+        if ray.ison(tpnt)==False:
+            return []
         return tpnt
         
     def plot(self,ax=None,color=None,alpha=0.6):

@@ -66,7 +66,10 @@ class LightRay(object):
             self.__history += value
         else:
             self.__history.append(value)
-    
+
+    def ison(self,point):
+        return self.ray.ison(point)
+            
     @property
     def path(self):
         """ Return the path """

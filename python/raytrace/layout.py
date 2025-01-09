@@ -60,8 +60,8 @@ class Layout(object):
         intersects = self.intersections(ray)
         while len(intersects)>0 and ray.state=='inflight':
             # Exclude the surface that we are currently on, distance=0
-            if count>0:
-                intersects = [idata for idata in intersects if np.abs(idata[2])>EPSILON]
+            if count > 0:
+                intersects = [d for d in intersects if np.abs(d[2])>EPSILON]
             # Determine which element it will hit first
             if len(intersects)==1:
                 bestind = 0
@@ -75,7 +75,6 @@ class Layout(object):
                 nextpnt = intersects[bestind][1]
                 indexes = [i[0] for i in intersects]
                 nextindex = indexes[bestind]
-                #import pdb; pdb.set_trace()
             else:
                 break
             # Process the ray through the next optical element
@@ -85,6 +84,7 @@ class Layout(object):
             ray = nextelem(ray)
             # Find new set of intersections
             intersects = self.intersections(ray)
+            print(ray.number,len(intersects),intersects)
             count += 1
         return ray
 
@@ -96,9 +96,6 @@ class Layout(object):
         # Loop over the elements and find the intersections
         #  keep track of which element it came from
         for i,elem in enumerate(self):
-            if ray is None:
-                print('layout.intersections() ray is None')
-                import pdb; pdb.set_trace()
             intpnt = elem.intersections(ray)
             if len(intpnt)>0:
                 if isinstance(intpnt,list)==False and isinstance(intpnt,tuple)==False:
@@ -109,6 +106,9 @@ class Layout(object):
                     # Get distance to the intersection point
                     dist = ray.distance(pt)
                     points.append((i,pt,dist))
+        # Exclude the surface that we are currently on, distance=0
+        #points = [d for d in points if np.abs(d[2])>EPSILON]
+        #import pdb; pdb.set_trace()
         return points
         
     def __getitem__(self,index):

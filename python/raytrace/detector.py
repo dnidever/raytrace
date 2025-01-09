@@ -34,6 +34,10 @@ class Detector(object):
     def detections(self,value):
         self.__data.append(value)
 
+    def clear(self):
+        """ Clear the detections """
+        self.__data = []
+        
     @property
     def coords(self):
         """ Return the coordinates of the detections """
@@ -74,10 +78,10 @@ class Detector(object):
                 
     def intersections(self,ray):
         """ Get the intersections of a ray with the detector """
-        if ray is None:
-            print('detector.intersections() ray is None')
-            import pdb; pdb.set_trace()
         tpnt = self.rectangle.intersections(ray)
+        # Make sure that the intersection point is along the direction of the ray
+        if len(tpnt)>0 and ray.ison(tpnt)==False:
+            return []
         return tpnt
     
     def display(self,bins=1000):

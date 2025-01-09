@@ -814,6 +814,31 @@ class Ray(object):
     def __array__(self):
         return self.data
 
+    def dot(self,value):
+        """ Return dot product of two vectors """
+        if issubclass(value.__class__,Vector):
+            data = value.data
+        if isinstance(value,Ray):
+            data = value.normal.data
+        else:
+            data = np.atleast_1d(value).astype(float)
+            if data.size != 3:
+                raise ValueError('must have three values')
+        return np.dot(self.normal.data,data)
+
+    def cross(self,value):
+        """ Return cross product of two vectors """
+        if issubclass(value.__class__,Vector):
+            data = value.data
+        if isinstance(value,Ray):
+            data = value.normal.data
+        else:
+            data = np.atleast_1d(value).astype(float)
+            if data.size != 3:
+                raise ValueError('must have three values')
+        cp = np.cross(self.normal.data,data)
+        return Vector(cp)
+    
     # def rotate(self,rot,degrees=False):
     #     """ Rotate the ray by this rotation(s)."""
     #     if isinstance(rot,np.ndarray):
@@ -866,6 +891,9 @@ class Ray(object):
             cen = point.data
         else:
             cen = np.array(point).astype(float)
+        # Check if we are on this point
+        if np.linalg.norm(point-self.position.data) < EPSILON:
+            return True
         # Plug point into line parametric equations and see if there is a solution
         #  x02 = x01 + a*t
         #  y02 = y01 + b*t
@@ -875,23 +903,31 @@ class Ray(object):
         #  if a=0, then we have x02=x01
         t = []
         for i in range(3):
-            if self.normal.data[i]==0:
-                if cen[i] != self.position.data[i]:
+            if np.abs(self.normal.data[i]) < EPSILON:
+                if np.abs(self.position.data[i]-cen[i]) > EPSILON:
                     return False
             else:
                 t.append((cen[i]-self.position.data[i])/self.normal.data[i])
         # If there are multiple t's, then make sure they are the same
         # and t >= 0:
+        value = False
         if len(t)==0:
-            return False
+            value = False
         elif len(t)==1 and t[0]>=0:
-            return True
+            value = True
         elif len(t)==2 and t[0]>=0 and np.abs(t[0]-t[1]) < EPSILON:
-            return True
+            value = True
         elif len(t)==3 and t[0]>=0 and np.abs(t[0]-t[1]) < EPSILON and np.abs(t[0]-t[2]) < EPSILON:
-            return True
+            value = True
         else:
-            return False
+            value = False
+        # Check that this point is along the direction of our ray
+        if value:
+            v = NormalVector(point-self.position.data)
+            dp = self.dot(v)
+            if dp < 0:
+                value = False
+        return value
             
     def plot(self,ax=None,color=None):
         """ Make a 3-D plot """
